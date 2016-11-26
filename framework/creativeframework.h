@@ -25,4 +25,3 @@ bool32 vSync = false;
 uint32 time;
 uint64 performanceFrequency;		//the frequency of the performance counter in counts per seonds, unsigned long long
 
-#include "sdl2_framework.cpp"

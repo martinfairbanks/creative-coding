@@ -10,6 +10,8 @@
 #include <sstream>	//sprintf
 #include <map>		//for keyPressed
 
+#include "creativeframework.h"
+
 SDL_Renderer *renderer = 0;
 SDL_Window *window = 0;
 TTF_Font* font = 0;
@@ -38,8 +40,8 @@ enum MouseButtons
 };
 
 SDL_GameController *controllerHandle;
-
 uint32 mouseButton[3];
+
 uint8 joyUp;
 uint8 joyDown;
 uint8 joyLeft;
@@ -52,12 +54,11 @@ uint8 joyAButton;
 uint8 joyBButton;
 uint8 joyXButton;
 uint8 joyYButton;
-
 int32 joyStickX;
 int32 joyStickY;
 int32 joyRightStickX;
 int32 joyRightStickY;
-static const int32 joyDeadZone = 8000;
+const int32 joyDeadZone = 8000;
 
 bool keyDown(int32 key)
 {
@@ -189,7 +190,6 @@ void quit()
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
-
 }
 
 int getWindowRefreshRate()

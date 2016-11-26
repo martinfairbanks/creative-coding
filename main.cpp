@@ -1,4 +1,5 @@
-#include "framework/creativeframework.h"
+//build as a single translation unit
+#include "framework/sdl2_framework.cpp"
 
 void setup()
 {
