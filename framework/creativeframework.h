@@ -21,7 +21,20 @@ int32 screenWidth;
 int32 screenHeight; 
 bool32 fullscreen = false;
 bool32 running = true;
-bool32 vSync = false;
-uint32 time;
-uint64 performanceFrequency;		//the frequency of the performance counter in counts per seonds, unsigned long long
+bool32 vSync = true;
+uint64 performanceFrequency;		//the frequency of the performance counter in counts per seonds
 
+#if defined(_DEBUG)
+	#include <iostream>
+	#define LOG(x) std::cout << x << std::endl;
+	#define LOGERROR(x)\
+				std::cout << x << std::endl; \
+				system("PAUSE"); \
+				SDL_Quit(); \
+				exit(1);
+	#define Assert(expression) if(!(expression)) { *(int *)0 = 0; }
+#else
+	#define LOG(x) 
+	#define LOGERROR(x)
+	#define Assert(expression)
+#endif

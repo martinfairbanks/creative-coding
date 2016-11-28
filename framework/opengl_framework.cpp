@@ -1,21 +1,24 @@
-﻿/* Linking */
+/* Linking */
 #pragma comment(lib, "SDL2.lib")
 #pragma comment(lib, "SDL2main.lib")
-#pragma comment(lib, "SDL2_ttf.lib")
+#pragma comment(lib, "opengl32.lib")
+//#pragma comment(lib, "glu32.lib")
+#pragma comment(lib, "glew32.lib")
 
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_ttf.h>
+#include <GL/glew.h>
+#include <gl/glu.h>
 #include <stdlib.h> //srand
 #include <crtdbg.h> //memory leak check
-#include <sstream>	//sprintf
 #include <map>		//for keyPressed
 
 #include "creativeframework.h"
 
 /* Globals */
-SDL_Renderer *renderer = 0;
+SDL_GLContext glContext;
 SDL_Window *window = 0;
-TTF_Font* font = 0;
+uint32 VBO, VAO;
+int32 shaderProgram;
 const Uint8 *keystates = 0;
 std::map<int, bool> keyArray;
 SDL_GameController *controllerHandle;
@@ -48,12 +51,24 @@ int32 joyRightStickX;
 int32 joyRightStickY;
 const int32 joyDeadZone = 8000;
 
-struct ColorRGB
-{
-	int32 r;
-	int32 g;
-	int32 b;
-} color{ 0xff,0xff,0xff };
+/* position of each vertex point */
+const char* vertexShaderSource =	"#version 430 core														\n"
+									"																		\n"
+									"void main(void)														\n"
+									"{																		\n"
+									"    gl_Position = vec4(0.0f, 0.0f, 0.5f, 1.0);							\n"
+									"}																		\n";
+
+
+/* color of each fragment (pixel-sized area of the triangle) */
+const char* fragmentShaderSource =	"#version 430 core														\n"
+									"																		\n"
+									"out vec4 color;														\n"
+									"																		\n"
+									"void main(void)														\n"
+									"{																		\n"
+									"    color = vec4(0.0, 0.8, 1.0, 1.0);									\n"
+									"}																		\n"; 
 
 void setup();
 void updateAndDraw(uint32 t);
@@ -78,25 +93,35 @@ bool keyPressed(int32 key)
 			return true;
 		}
 	}
-	else 
+	else
 		keyArray[key] = false;
 
 	return false;
 }
 
-void print(char *message, int x, int y)
+/*void print(char *message, int x, int y)
 {
-	SDL_Surface *surf = TTF_RenderText_Solid/*TTF_RenderText_Blended*/(font, message, SDL_Color{ (uint8)color.r, (uint8)color.g, (uint8)color.b });
-	SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surf);
-	SDL_FreeSurface(surf);
+	
+}*/
 
-	//get width and height of texture
-	int w, h;
-	SDL_QueryTexture(texture, NULL, NULL, &w, &h);
+char* readFile(const char* filename)
+{
+	FILE* fp = fopen(filename, "r");
+	//get file length
+	fseek(fp, 0, SEEK_END);
+	long fileLength = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+	char* contents = (char*)malloc(fileLength + 1);
+	
+	//clear memory
+	for (int i = 0; i < fileLength + 1; i++) {
+		contents[i] = 0;
+	}
 
-	SDL_Rect dst = { x, y, w, h };
-	SDL_RenderCopy(renderer, texture, NULL, &dst);
-	SDL_DestroyTexture(texture);
+	fread(contents, 1, fileLength, fp);
+	contents[fileLength + 1] = '\0';
+	fclose(fp);
+	return contents;
 }
 
 void screen(int width, int height, bool screen, char *title)
@@ -110,52 +135,112 @@ void screen(int width, int height, bool screen, char *title)
 	int32 tempWidth = screenWidth = width;
 	int32 tempHeight = screenHeight = height;
 
-	uint32 flags = SDL_WINDOW_RESIZABLE; //SDL_WINDOW_SHOWN
+	uint32 flags = SDL_WINDOW_OPENGL;
 
 	//set to zero to scale the window to desired resolution without changing the desktop resolution
 	if (fullscreen)
 	{
-		flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
+		flags = SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN_DESKTOP;
 		tempWidth = 0;
 		tempHeight = 0;
 	}
 
 	window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, tempWidth, tempHeight, flags);
+	glContext = SDL_GL_CreateContext(window);
+
+	//use doublebuffer
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+
 	if (vSync)
-		renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		SDL_GL_SetSwapInterval(1);
 	else
-		renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+		SDL_GL_SetSwapInterval(0);
 
-	if (fullscreen)
-	{
-		//scale window to desired resolution
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-		SDL_RenderSetLogicalSize(renderer, screenWidth, screenHeight);
+	//initialize GLEW
+	glewInit();
+
+	glViewport(0, 0, screenWidth, screenHeight);
+	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+
+	if (!glewIsSupported("GL_VERSION_3_3")) {
+		LOGERROR("OpenGL 3.3 not available");
 	}
 
-	TTF_Init();
-	font = TTF_OpenFont("data/verdana.ttf", 12);
+	LOG(glGetString(GL_VERSION));
 
-	controllerHandle = SDL_GameControllerOpen(0);
-	SDL_GetMouseState(&mouseX, &mouseY);
+	/* build and compile shader program */
+	//const char *vertexShader = readFile("data/shaders/vertexshader2.vert");
+	//const char *fragmentShader = readFile("data/shaders/fragmentshader2.frag");
 
-	for (int i = 1; i <= 3; i++)
+	// Vertex shader
+	int32 vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+	glCompileShader(vertexShader);
+
+	//check for compilation errors
+	int32 success;
+	char infoLog[512];
+	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+	if (!success)
 	{
-		mouseButton[i] = SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(i);
+		glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+		LOG("Vertex shader error: " << infoLog);
 	}
 
-	srand(SDL_GetTicks());
-	
-	SDL_SetRenderDrawColor(renderer, 0x65, 0x9C, 0xEF, 255);
-	SDL_RenderClear(renderer);
+	//fragment shader
+	int32 fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+	glCompileShader(fragmentShader);
+
+	//check for compilation errors
+	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+	if (!success)
+	{
+		glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+		LOG("Fragment shader error: " << infoLog);
+	}
+
+	//link shaders to make the shaderprogram
+	int32 shaderProgram = glCreateProgram();
+	glAttachShader(shaderProgram, vertexShader);
+	glAttachShader(shaderProgram, fragmentShader);
+	glLinkProgram(shaderProgram);
+
+	glDeleteShader(vertexShader);
+	glDeleteShader(fragmentShader);
+#if 0
+	real32 vertices[] = {
+		//first triangle
+		1.0f,  1.0f, 0.0f,	//top Right
+		1.0f, -1.0f, 0.0f,	//bottom Right
+		-1.0f,  1.0f, 0.0f, //top Left 
+		//second triangle
+		1.0f, -1.0f, 0.0f,	//bottom Right
+		-1.0f, -1.0f, 0.0f, //bottom Left
+		-1.0f,  1.0f, 0.0f  //top Left
+	};
+
+	//bind the Vertex Array Object, then bind and set vertex buffers and attribute pointers
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+	glBindVertexArray(VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(real32), (void *)0);
+	glEnableVertexAttribArray(0);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0); 
+	glBindVertexArray(0); 
+#endif
+	//wireframe
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //default GL_FILL
 }
 
 void quit()
 {
 	SDL_GameControllerClose(controllerHandle);
-	TTF_CloseFont(font);
-	TTF_Quit();
-	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
 }
@@ -203,41 +288,41 @@ int main(int argc, char** argv)
 		{
 			switch (event.type)
 			{
-				case SDL_KEYDOWN:
+			case SDL_KEYDOWN:
+			{
+				switch (event.key.keysym.sym)
 				{
-					switch (event.key.keysym.sym)
+				case SDLK_RETURN:
+				{
+					if (fullscreen)
 					{
-						case SDLK_RETURN:
-						{
-							if (fullscreen)
-							{
-								SDL_SetWindowFullscreen(window, SDL_FALSE);
-								fullscreen = false;
-							}
-							else
-							{
-								SDL_SetWindowFullscreen(window, SDL_TRUE);
-								fullscreen = true;
-							}
-						}
-					} break;
+						SDL_SetWindowFullscreen(window, SDL_FALSE);
+						fullscreen = false;
+					}
+					else
+					{
+						SDL_SetWindowFullscreen(window, SDL_TRUE);
+						fullscreen = true;
+					}
+				}
 				} break;
+			} break;
 
-				case SDL_KEYUP:
-				{
-					if (event.key.keysym.sym == SDLK_ESCAPE)
-						running = false;
-				} break;
-
-				case SDL_QUIT:
-				{
+			case SDL_KEYUP:
+			{
+				if (event.key.keysym.sym == SDLK_ESCAPE)
 					running = false;
-				} break;
-				
-				
+			} break;
+
+			case SDL_QUIT:
+			{
+				running = false;
+			} break;
+
+
 			}
 		}
-		
+
 		if (SDL_GameControllerGetAttached(controllerHandle))
 		{
 			joyUp = SDL_GameControllerGetButton(controllerHandle, SDL_CONTROLLER_BUTTON_DPAD_UP);
@@ -266,7 +351,7 @@ int main(int argc, char** argv)
 		{
 			mouseButton[i] = SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(i);
 		}
-		
+
 		/* the time it takes to draw one frame */
 		uint32 frameTime = SDL_GetTicks() - frameStart;
 		if (frameTime > MAX_FRAME_TIME)
@@ -283,16 +368,16 @@ int main(int argc, char** argv)
 		real64 msPerFrame = (((1000.0f * (real64)counterElapsed) / (real64)performanceFrequency));
 		real64 fps = (real64)performanceFrequency / (real64)counterElapsed;
 		real64 megaCyclesPerFrame = ((real64)cyclesElapsed / (1000.0f * 1000.0f));
-		
+
 #if defined(_DEBUG)        
 		char message[256];
 		sprintf_s(message, "%.03fms, %.03fFPS, %.03fMEGAc/f, RefreshRate: %d\0", msPerFrame, fps, megaCyclesPerFrame, refreshRate);
-		print(message, 1, screenHeight - 20);
+		//print(message, 1, screenHeight - 20);
 		SDL_SetWindowTitle(window, message);
 		totalFrames++;
 #endif
 		//update screen
-		SDL_RenderPresent(renderer);
+		SDL_GL_SwapWindow(window);
 
 		lastCycleCount = endCycleCount;
 		lastCounter = endCounter;
@@ -300,10 +385,10 @@ int main(int argc, char** argv)
 #if defined(_DEBUG)   
 	printf("Running time: %d seconds\n", SDL_GetTicks() / 1000);
 	printf("Frames crunched: %d\n", totalFrames);
-	//TODO: fix type conversions to get a more accurate result
+	//TODO: fix type conversions to get accurate result
 	uint32 fps = (totalFrames / uint32((SDL_GetTicks() / 1000.f)));
 	printf("Average FPS: %u\n", fps);
-	system("PAUSE");
+	//system("PAUSE");
 #endif
 	quit();
 	return 0;
@@ -311,25 +396,21 @@ int main(int argc, char** argv)
 
 void setup()
 {
-	screen(960, 540, false, "creative coding");
+	screen(960, 540, false, "opengl framework");
 
 }
 
 void updateAndDraw(uint32 t)
 {
-	static int x = 400;
+	const GLfloat color[] = { (float)sin(SDL_GetTicks() / 100)*0.5f + 0.5f,(float)cos(SDL_GetTicks() / 100)*0.5f + 0.5f,0.0f, 1.0f };
+	glClearBufferfv(GL_COLOR, 0, color);
 
-	if (joyStickX < -joyDeadZone || keyPressed(SDL_SCANCODE_D))
-		x++;
+	//use program object for rendering
+	glUseProgram(shaderProgram);
 
-	if (joyStickX > joyDeadZone || keyPressed(SDL_SCANCODE_A))
-		x--;
-
-	SDL_SetRenderDrawColor(renderer, 0x65, 0x9C, 0xEF, 255);
-	SDL_RenderClear(renderer);
-
-	SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0x00, 0xFF);
-	SDL_RenderDrawPoint(renderer, x, 240);
+	// Draw one point
+	glPointSize(40.0f);
+	glDrawArrays(GL_POINTS, 0, 1);
 }
 
 
