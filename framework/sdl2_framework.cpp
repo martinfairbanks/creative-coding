@@ -48,12 +48,9 @@ int32 joyRightStickX;
 int32 joyRightStickY;
 const int32 joyDeadZone = 8000;
 
-struct ColorRGB
-{
-	int32 r;
-	int32 g;
-	int32 b;
-} color{ 0xff,0xff,0xff };
+SDL_Texture *backbufferTexture;	//texture used for drawing with the pixelbuffer
+uint32 *pixelBuffer;			//pixelbuffer for pixel manipulation
+bool32 fillFlag = true;			//fill flag for shapes
 
 void setup();
 void updateAndDraw(uint32 t);
@@ -82,6 +79,201 @@ bool keyPressed(int32 key)
 		keyArray[key] = false;
 
 	return false;
+}
+
+inline void uploadPixels()
+{
+	SDL_UpdateTexture(backbufferTexture, NULL, pixelBuffer, screenWidth * sizeof(uint32));
+	SDL_RenderCopy(renderer, backbufferTexture, NULL, NULL);
+	//SDL_RenderPresent(renderer);
+};
+
+inline void flip()
+{
+	SDL_RenderPresent(renderer);
+};
+
+inline void fill()
+{
+	fillFlag = true;
+}
+
+inline void noFill()
+{
+	fillFlag = false;
+}
+
+/* clear the pixelbuffer with specific color */
+inline void clear(int32 col)
+{
+	//memset(pixelBuffer, color, screenWidth * screenHeight * 4);
+	void *memory = pixelBuffer;
+	int count = screenWidth * screenHeight;
+
+	/* memory fill */
+	_asm
+	{
+		cld								// clear the direction flag
+		mov edi, memory					// move pixelBuffer pointer into EDI
+		mov ecx, count					// ECX hold loop count
+		mov eax, col					// EAX hold value
+		rep stosd						// fill
+	}
+}
+
+inline void clear(uint8 r, uint8 g, uint8 b)
+{
+	uint32 col = r << 16 | g << 8 | b | 0xff000000;
+	void *memory = pixelBuffer;
+	int count = screenWidth * screenHeight;
+
+	_asm
+	{
+		cld								// clear the direction flag
+		mov edi, memory					// move pixelBuffer pointer into EDI
+		mov ecx, count					// ECX hold loop count
+		mov eax, col					// EAX hold value
+		rep stosd						// fill
+	}
+}
+
+inline void clear(ColorRGB c)
+{
+	int col = c.r << 16 | c.g << 8 | c.b | 0xff000000;
+	void *memory = pixelBuffer;
+	int count = screenWidth * screenHeight;
+
+	_asm
+	{
+		cld								// clear the direction flag
+		mov edi, memory					// move pixelBuffer pointer into EDI
+		mov ecx, count					// ECX hold loop count
+		mov eax, col					// EAX hold value
+		rep stosd						// fill
+	}
+}
+
+inline void pixel(int x, int y)
+{
+	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
+	int col = color.r << 16 | color.g << 8 | color.b | 0xff000000;
+	pixelBuffer[y*screenWidth + x] = col;
+}
+
+inline void pixel(int x, int y, uint8 R, uint8 G, uint8 B)
+{
+	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
+	int color = R << 16 | G << 8 | B | 0xff000000;
+	pixelBuffer[y*screenWidth + x] = color;
+}
+
+inline void pixel(int x, int y, unsigned int col)
+{
+	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
+	pixelBuffer[y*screenWidth + x] = col;
+}
+
+inline void pixel(int x, int y, ColorRGB col)
+{
+	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
+	int c = col.r << 16 | col.g << 8 | col.b | 0xff000000;
+	pixelBuffer[y*screenWidth + x] = c;
+}
+
+//draws a line with Breshenam's algorithm
+inline void line(int x0, int y0, int x1, int y1)
+{
+	bool step = abs(x1 - x0) < abs(y1 - y0);
+
+	//rotate the line
+	if (step)
+	{
+		SWAP(x0, y0);
+		SWAP(x1, y1);
+	}
+
+	if (x1 < x0)
+	{
+		SWAP(x0, x1);
+		SWAP(y0, y1);
+	}
+
+	//Bresenham’s algorithm starts by plotting a pixel at the first coordinate of the line
+	//(x0, y0), and to x+1, it takes the difference of the y component of the line to the
+	//two possible y coordinates, and uses the y coordinate where the error is the smaller,
+	//and repeats this for every pixel.
+
+	float error = 0.0;
+
+	//line slope
+	float slope = (float)abs(y1 - y0) / (x1 - x0);
+
+	//starting point
+	int y = y0;
+
+	int ystep = (y1 > y0 ? 1 : -1);
+
+	for (int i = x0; i < x1; i++)
+	{
+		if (step)
+			pixel(y, i);
+		else
+			pixel(i, y);
+
+		error += slope;
+
+		if (error >= 0.5)
+		{
+			y += ystep;
+			error -= 1.0;
+		}
+	}
+}
+
+//Bresenham circle algorithm
+void circle(int x0, int y0, int radius)
+{
+	if (fillFlag)
+	{
+		int x = radius;
+		int y = 0;
+		int err = 0;
+
+		while (x >= y)
+		{
+			pixel(x0 + x, y0 + y);
+			pixel(x0 + y, y0 + x);
+			pixel(x0 - y, y0 + x);
+			pixel(x0 - x, y0 + y);
+			pixel(x0 - x, y0 - y);
+			pixel(x0 - y, y0 - x);
+			pixel(x0 + y, y0 - x);
+			pixel(x0 + x, y0 - y);
+
+			y += 1;
+			err += 1 + 2 * y;
+			if (2 * (err - x) + 1 > 0)
+			{
+				x -= 1;
+				err += 1 - 2 * x;
+			}
+		}
+	}
+	else
+	{
+		int r2 = radius * radius;
+		int area = r2 << 2;
+		int rr = radius << 1;
+
+		for (int i = 0; i < area; i++)
+		{
+			int tx = (i % rr) - radius;
+			int ty = (i / rr) - radius;
+
+			if (tx * tx + ty * ty <= r2)
+				pixel(x0 + tx, y0 + ty);
+		}
+	}
 }
 
 void print(char *message, int x, int y)
@@ -133,6 +325,15 @@ void screen(int width, int height, bool screen, char *title)
 		SDL_RenderSetLogicalSize(renderer, screenWidth, screenHeight);
 	}
 
+	backbufferTexture = SDL_CreateTexture(renderer,
+		SDL_PIXELFORMAT_ARGB8888,
+		SDL_TEXTUREACCESS_STREAMING,
+		screenWidth, screenHeight);
+
+	//pixelBuffer = new unsigned int[screenWidth * screenHeight];	
+	pixelBuffer = (uint32 *)malloc(screenWidth * screenHeight * 4);
+	//pixelBuffer = (uint32 *)VirtualAlloc(0, screenWidth * screenHeight * bytesPerPixel, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+
 	TTF_Init();
 	font = TTF_OpenFont("data/verdana.ttf", 12);
 
@@ -152,6 +353,7 @@ void screen(int width, int height, bool screen, char *title)
 
 void quit()
 {
+	free(pixelBuffer);
 	SDL_GameControllerClose(controllerHandle);
 	TTF_CloseFont(font);
 	TTF_Quit();
@@ -233,8 +435,6 @@ int main(int argc, char** argv)
 				{
 					running = false;
 				} break;
-				
-				
 			}
 		}
 		
@@ -292,6 +492,7 @@ int main(int argc, char** argv)
 		totalFrames++;
 #endif
 		//update screen
+		uploadPixels();
 		SDL_RenderPresent(renderer);
 
 		lastCycleCount = endCycleCount;
@@ -303,7 +504,7 @@ int main(int argc, char** argv)
 	//TODO: fix type conversions to get a more accurate result
 	uint32 fps = (totalFrames / uint32((SDL_GetTicks() / 1000.f)));
 	printf("Average FPS: %u\n", fps);
-	system("PAUSE");
+	//system("PAUSE");
 #endif
 	quit();
 	return 0;
@@ -317,7 +518,7 @@ void setup()
 
 void updateAndDraw(uint32 t)
 {
-	static int x = 400;
+	/*static int x = 400;
 
 	if (joyStickX < -joyDeadZone || keyPressed(SDL_SCANCODE_D))
 		x++;
@@ -329,7 +530,23 @@ void updateAndDraw(uint32 t)
 	SDL_RenderClear(renderer);
 
 	SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0x00, 0xFF);
-	SDL_RenderDrawPoint(renderer, x, 240);
+	SDL_RenderDrawPoint(renderer, x, 240);*/
+
+	clear(0x659CEF);
+	clear(Color::cyan);
+	clear(0xff, 0xff, 0xff);
+	clear(0x659CEF);
+	color = Color::red;
+	pixel(400, 100);
+	pixel(401, 100);
+	pixel(400, 101);
+	pixel(401, 101);
+	line(0, 0, 200, 200);
+	circle(200, 200, 40);
+	noFill();
+	color = Color::magenta;
+	circle(400, 400, 60);
+
 }
 
 

@@ -17,7 +17,8 @@
 /* Globals */
 SDL_GLContext glContext;
 SDL_Window *window = 0;
-uint32 VBO, VAO;
+uint32 VBO;	//vertex buffer object id
+uint32 VAO;	//vertex array object id
 int32 shaderProgram;
 const Uint8 *keystates = 0;
 std::map<int, bool> keyArray;
@@ -58,10 +59,9 @@ const char* vertexShaderSource =	"#version 430 core														\n"
 									"{																		\n"
 									"    gl_Position = vec4(0.0f, 0.0f, 0.5f, 1.0);							\n"
 									"}																		\n";
-
-
+									
 /* color of each fragment (pixel-sized area of the triangle) */
-const char* fragmentShaderSource =	"#version 430 core														\n"
+const char *fragmentShaderSource =	"#version 430 core														\n"
 									"																		\n"
 									"out vec4 color;														\n"
 									"																		\n"
@@ -208,8 +208,8 @@ void screen(int width, int height, bool screen, char *title)
 
 	glDeleteShader(vertexShader);
 	glDeleteShader(fragmentShader);
-#if 0
-	real32 vertices[] = {
+
+	/*real32 vertices[] = {
 		//first triangle
 		1.0f,  1.0f, 0.0f,	//top Right
 		1.0f, -1.0f, 0.0f,	//bottom Right
@@ -218,22 +218,31 @@ void screen(int width, int height, bool screen, char *title)
 		1.0f, -1.0f, 0.0f,	//bottom Right
 		-1.0f, -1.0f, 0.0f, //bottom Left
 		-1.0f,  1.0f, 0.0f  //top Left
+	};*/
+	
+	// Set up vertex data (and buffer(s)) and attribute pointers
+	real32 vertices[] = {
+		-0.5f, -0.5f, 0.0f, // Left  
+		0.5f, -0.5f, 0.0f, // Right 
+		0.0f, 0.5f, 0.0f  // Top   
 	};
 
-	//bind the Vertex Array Object, then bind and set vertex buffers and attribute pointers
 	glGenVertexArrays(1, &VAO);
+
+	//create 1 new vertex buffer object
 	glGenBuffers(1, &VBO);
+	
 	glBindVertexArray(VAO);
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(real32), (void *)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
 	glEnableVertexAttribArray(0);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0); 
 	glBindVertexArray(0); 
-#endif
+	
 	//wireframe
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //default GL_FILL
 }
@@ -241,6 +250,7 @@ void screen(int width, int height, bool screen, char *title)
 void quit()
 {
 	SDL_GameControllerClose(controllerHandle);
+	SDL_GL_DeleteContext(glContext);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
 }
@@ -288,38 +298,36 @@ int main(int argc, char** argv)
 		{
 			switch (event.type)
 			{
-			case SDL_KEYDOWN:
-			{
-				switch (event.key.keysym.sym)
+				case SDL_KEYDOWN:
 				{
-				case SDLK_RETURN:
-				{
-					if (fullscreen)
+					switch (event.key.keysym.sym)
 					{
-						SDL_SetWindowFullscreen(window, SDL_FALSE);
-						fullscreen = false;
-					}
-					else
+					case SDLK_RETURN:
 					{
-						SDL_SetWindowFullscreen(window, SDL_TRUE);
-						fullscreen = true;
+						if (fullscreen)
+						{
+							SDL_SetWindowFullscreen(window, SDL_FALSE);
+							fullscreen = false;
+						}
+						else
+						{
+							SDL_SetWindowFullscreen(window, SDL_TRUE);
+							fullscreen = true;
+						}
 					}
-				}
+					} break;
 				} break;
-			} break;
 
-			case SDL_KEYUP:
-			{
-				if (event.key.keysym.sym == SDLK_ESCAPE)
+				case SDL_KEYUP:
+				{
+					if (event.key.keysym.sym == SDLK_ESCAPE)
+						running = false;
+				} break;
+
+				case SDL_QUIT:
+				{
 					running = false;
-			} break;
-
-			case SDL_QUIT:
-			{
-				running = false;
-			} break;
-
-
+				} break;
 			}
 		}
 
@@ -402,15 +410,24 @@ void setup()
 
 void updateAndDraw(uint32 t)
 {
-	const GLfloat color[] = { (float)sin(SDL_GetTicks() / 100)*0.5f + 0.5f,(float)cos(SDL_GetTicks() / 100)*0.5f + 0.5f,0.0f, 1.0f };
+	/*const GLfloat color[] = { (float)sin(SDL_GetTicks() / 1000), 0.5f, 0.0f, 1.0f };
 	glClearBufferfv(GL_COLOR, 0, color);
-
-	//use program object for rendering
 	glUseProgram(shaderProgram);
-
-	// Draw one point
 	glPointSize(40.0f);
 	glDrawArrays(GL_POINTS, 0, 1);
+	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+	*/
+
+	const GLfloat color[] = { 0.3f, 0.0f, 0.3f, 1.0f };
+	glClearBufferfv(GL_COLOR, 0, color);
+
+	//set shader program
+	glUseProgram(shaderProgram);
+	glBindVertexArray(VAO);
+	glDrawArrays(GL_TRIANGLES, 0, 3);
+	//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
 }
 
 
