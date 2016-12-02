@@ -108,7 +108,7 @@ inline void clear(int32 col)
 {
 	//memset(pixelBuffer, color, screenWidth * screenHeight * 4);
 	void *memory = pixelBuffer;
-	int count = screenWidth * screenHeight;
+	int32 count = screenWidth * screenHeight;
 
 	/* memory fill */
 	_asm
@@ -125,65 +125,65 @@ inline void clear(uint8 r, uint8 g, uint8 b)
 {
 	uint32 col = r << 16 | g << 8 | b | 0xff000000;
 	void *memory = pixelBuffer;
-	int count = screenWidth * screenHeight;
+	int32 count = screenWidth * screenHeight;
 
 	_asm
 	{
-		cld								// clear the direction flag
-		mov edi, memory					// move pixelBuffer pointer into EDI
-		mov ecx, count					// ECX hold loop count
-		mov eax, col					// EAX hold value
-		rep stosd						// fill
+		cld								
+		mov edi, memory					
+		mov ecx, count					
+		mov eax, col					
+		rep stosd						
 	}
 }
 
 inline void clear(ColorRGB c)
 {
-	int col = c.r << 16 | c.g << 8 | c.b | 0xff000000;
+	int32 col = c.r << 16 | c.g << 8 | c.b | 0xff000000;
 	void *memory = pixelBuffer;
-	int count = screenWidth * screenHeight;
+	int32 count = screenWidth * screenHeight;
 
 	_asm
 	{
-		cld								// clear the direction flag
-		mov edi, memory					// move pixelBuffer pointer into EDI
-		mov ecx, count					// ECX hold loop count
-		mov eax, col					// EAX hold value
-		rep stosd						// fill
+		cld								
+		mov edi, memory					
+		mov ecx, count					
+		mov eax, col					
+		rep stosd						
 	}
 }
 
-inline void pixel(int x, int y)
+inline void pixel(int32 x, int32 y)
 {
 	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
-	int col = color.r << 16 | color.g << 8 | color.b | 0xff000000;
+	int32 col = color.r << 16 | color.g << 8 | color.b | 0xff000000;
 	pixelBuffer[y*screenWidth + x] = col;
 }
 
-inline void pixel(int x, int y, uint8 R, uint8 G, uint8 B)
+inline void pixel(int32 x, int32 y, uint8 R, uint8 G, uint8 B)
 {
 	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
-	int color = R << 16 | G << 8 | B | 0xff000000;
+	int32 color = R << 16 | G << 8 | B | 0xff000000;
 	pixelBuffer[y*screenWidth + x] = color;
 }
 
-inline void pixel(int x, int y, unsigned int col)
+inline void pixel(int32 x, int32 y, uint32 col)
 {
 	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
 	pixelBuffer[y*screenWidth + x] = col;
 }
 
-inline void pixel(int x, int y, ColorRGB col)
+inline void pixel(int32 x, int32 y, ColorRGB col)
 {
 	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
-	int c = col.r << 16 | col.g << 8 | col.b | 0xff000000;
+	int32 c = col.r << 16 | col.g << 8 | col.b | 0xff000000;
 	pixelBuffer[y*screenWidth + x] = c;
 }
 
 //draws a line with Breshenam's algorithm
-inline void line(int x0, int y0, int x1, int y1)
+inline void line(int32 x0, int32 y0, int32 x1, int32 y1)
 {
-	bool step = abs(x1 - x0) < abs(y1 - y0);
+	bool32 step = abs(x1 - x0) < abs(y1 - y0);
 
 	//rotate the line
 	if (step)
@@ -203,17 +203,17 @@ inline void line(int x0, int y0, int x1, int y1)
 	//two possible y coordinates, and uses the y coordinate where the error is the smaller,
 	//and repeats this for every pixel.
 
-	float error = 0.0;
+	real32 error = 0.0;
 
 	//line slope
-	float slope = (float)abs(y1 - y0) / (x1 - x0);
+	real32 slope = (real32)abs(y1 - y0) / (x1 - x0);
 
 	//starting point
-	int y = y0;
+	int32 y = y0;
 
-	int ystep = (y1 > y0 ? 1 : -1);
+	int32 ystep = (y1 > y0 ? 1 : -1);
 
-	for (int i = x0; i < x1; i++)
+	for (int32 i = x0; i < x1; i++)
 	{
 		if (step)
 			pixel(y, i);
@@ -231,13 +231,13 @@ inline void line(int x0, int y0, int x1, int y1)
 }
 
 //Bresenham circle algorithm
-void circle(int x0, int y0, int radius)
+inline void circle(int32 x0, int32 y0, int32 radius)
 {
 	if (fillFlag)
 	{
-		int x = radius;
-		int y = 0;
-		int err = 0;
+		int32 x = radius;
+		int32 y = 0;
+		int32 err = 0;
 
 		while (x >= y)
 		{
@@ -261,14 +261,14 @@ void circle(int x0, int y0, int radius)
 	}
 	else
 	{
-		int r2 = radius * radius;
-		int area = r2 << 2;
-		int rr = radius << 1;
+		int32 r2 = radius * radius;
+		int32 area = r2 << 2;
+		int32 rr = radius << 1;
 
-		for (int i = 0; i < area; i++)
+		for (int32 i = 0; i < area; i++)
 		{
-			int tx = (i % rr) - radius;
-			int ty = (i / rr) - radius;
+			int32 tx = (i % rr) - radius;
+			int32 ty = (i / rr) - radius;
 
 			if (tx * tx + ty * ty <= r2)
 				pixel(x0 + tx, y0 + ty);
@@ -276,14 +276,90 @@ void circle(int x0, int y0, int radius)
 	}
 }
 
-void print(char *message, int x, int y)
+/* SDL hardware rendering */
+inline void _setColor(int32 r, int32 g, int32 b)
+{
+	SDL_SetRenderDrawColor(renderer, r, g, b, 0xff);
+}
+
+inline void _setColor(ColorRGB col)
+{
+	SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, 0xff);
+}
+
+inline void _pixel(int32 x, int32 y)
+{
+	SDL_RenderDrawPoint(renderer, x, y);
+}
+
+inline void _line(int32 x0, int32 y0, int32 x1, int32 y1)
+{
+	SDL_RenderDrawLine(renderer, x0, y0, x1, y1);
+}
+
+inline void _circle(int32 x0, int32 y0, int32 radius)
+{
+	if (fillFlag)
+	{
+		int32 x = radius;
+		int32 y = 0;
+		int32 err = 0;
+
+		while (x >= y)
+		{
+			SDL_RenderDrawPoint(renderer, x0 + x, y0 + y);
+			SDL_RenderDrawPoint(renderer, x0 + y, y0 + x);
+			SDL_RenderDrawPoint(renderer, x0 - y, y0 + x);
+			SDL_RenderDrawPoint(renderer, x0 - x, y0 + y);
+			SDL_RenderDrawPoint(renderer, x0 - x, y0 - y);
+			SDL_RenderDrawPoint(renderer, x0 - y, y0 - x);
+			SDL_RenderDrawPoint(renderer, x0 + y, y0 - x);
+			SDL_RenderDrawPoint(renderer, x0 + x, y0 - y);
+
+			y += 1;
+			err += 1 + 2 * y;
+			if (2 * (err - x) + 1 > 0)
+			{
+				x -= 1;
+				err += 1 - 2 * x;
+			}
+		}
+	}
+	else
+	{
+		int32 r2 = radius * radius;
+		int32 area = r2 << 2;
+		int32 rr = radius << 1;
+
+		for (int32 i = 0; i < area; i++)
+		{
+			int32 tx = (i % rr) - radius;
+			int32 ty = (i / rr) - radius;
+
+			if (tx * tx + ty * ty <= r2)
+				SDL_RenderDrawPoint(renderer, x0 + tx, y0 + ty);
+		}
+	}
+}
+
+inline void _rect(int xPos, int yPos, int width, int height)
+{
+	SDL_Rect rect = { xPos, yPos, width, height };
+	if (fillFlag)
+		SDL_RenderFillRect(renderer, &rect);
+	else
+		SDL_RenderDrawRect(renderer, &rect);
+}
+
+
+void print(char *message, int32 x, int32 y)
 {
 	SDL_Surface *surf = TTF_RenderText_Solid/*TTF_RenderText_Blended*/(font, message, SDL_Color{ (uint8)color.r, (uint8)color.g, (uint8)color.b });
 	SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surf);
 	SDL_FreeSurface(surf);
 
 	//get width and height of texture
-	int w, h;
+	int32 w, h;
 	SDL_QueryTexture(texture, NULL, NULL, &w, &h);
 
 	SDL_Rect dst = { x, y, w, h };
@@ -291,7 +367,7 @@ void print(char *message, int x, int y)
 	SDL_DestroyTexture(texture);
 }
 
-void screen(int width, int height, bool screen, char *title)
+void screen(int32 width, int32 height, bool32 screen, char *title)
 {
 	performanceFrequency = SDL_GetPerformanceFrequency();
 	srand(SDL_GetTicks());
@@ -340,7 +416,7 @@ void screen(int width, int height, bool screen, char *title)
 	controllerHandle = SDL_GameControllerOpen(0);
 	SDL_GetMouseState(&mouseX, &mouseY);
 
-	for (int i = 1; i <= 3; i++)
+	for (int32 i = 1; i <= 3; i++)
 	{
 		mouseButton[i] = SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(i);
 	}
@@ -492,7 +568,7 @@ int main(int argc, char** argv)
 		totalFrames++;
 #endif
 		//update screen
-		uploadPixels();
+		//uploadPixels();
 		SDL_RenderPresent(renderer);
 
 		lastCycleCount = endCycleCount;
@@ -546,6 +622,15 @@ void updateAndDraw(uint32 t)
 	noFill();
 	color = Color::magenta;
 	circle(400, 400, 60);
+	uploadPixels();
+
+	_setColor(Color::green);
+	fill();
+	_rect(100, 100, 50, 50);
+	_circle(200, 200, 50);
+	_setColor(Color::yellow);
+	_pixel(400, 400);
+	_line(400, 500, 300, 200);
 
 }
 
