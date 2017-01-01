@@ -2,12 +2,12 @@
 #pragma comment(lib, "SDL2.lib")
 #pragma comment(lib, "SDL2main.lib")
 #pragma comment(lib, "opengl32.lib")
-#pragma comment(lib, "glu32.lib")
+//#pragma comment(lib, "glu32.lib")
+#pragma comment(lib, "glew32.lib")
 
 #include <SDL2/SDL.h>
-#include <sdl2/SDL_opengl.h>
+#include <GL/glew.h>
 #include <gl/glu.h>
-#include <crtdbg.h> //memory leak check
 #include <map>		//for keyPressed
 
 #include "creativeframework.h"
@@ -15,9 +15,13 @@
 /* Globals */
 SDL_GLContext glContext;
 SDL_Window *window = 0;
+uint32 VBO;	//vertex buffer object id
+uint32 VAO;	//vertex array object id
+int32 shaderProgram;
 const Uint8 *keystates = 0;
 std::map<int, bool> keyArray;
 SDL_GameController *controllerHandle;
+
 
 uint8 joyUp;
 uint8 joyDown;
@@ -37,7 +41,24 @@ int32 joyRightStickX;
 int32 joyRightStickY;
 const int32 joyDeadZone = 8000;
 
-float angle = 0;						//rotation
+/* position of each vertex point */
+const char* vertexShaderSource =	"#version 430 core														\n"
+									"																		\n"
+									"void main(void)														\n"
+									"{																		\n"
+									"    gl_Position = vec4(0.0f, 0.0f, 0.5f, 1.0);							\n"
+									"}																		\n";
+
+
+/* color of each fragment (pixel-sized area of the triangle) */
+const char* fragmentShaderSource =	"#version 430 core														\n"
+									"																		\n"
+									"out vec4 color;														\n"
+									"																		\n"
+									"void main(void)														\n"
+									"{																		\n"
+									"    color = vec4(0.0, 1.0, 0.0, 1.0);									\n"
+									"}																		\n";
 
 bool keyDown(int32 key)
 {
@@ -65,32 +86,29 @@ bool keyPressed(int32 key)
 	return false;
 }
 
-//set viewport and reset projection
-void updateWindow(int w, int h)
+/*void print(char *message, int x, int y)
 {
-	real32 aspect;
-	real32 lightPos[] = { -50.f, 50.0f, 100.0f, 1.0f };
+	
+}*/
 
-	//prevent a divide by zero
-	if (h == 0)
-		h = 1;
+char* readFile(const char* filename)
+{
+	FILE* fp = fopen(filename, "r");
+	//get file length
+	fseek(fp, 0, SEEK_END);
+	long fileLength = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+	char* contents = (char*)malloc(fileLength + 1);
+	
+	//clear memory
+	for (int i = 0; i < fileLength + 1; i++) {
+		contents[i] = 0;
+	}
 
-	//set viewport to window dimensions
-	glViewport(0, 0, w, h);
-
-	//reset coordinate system
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-
-	aspect = (real32)w / (real32)h;
-	gluPerspective(35.0f, aspect, 1.0f, 225.0f);
-
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-
-	//glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
-
-	glTranslatef(0.0f, -0.4f, 0.0f);
+	fread(contents, 1, fileLength, fp);
+	contents[fileLength + 1] = '\0';
+	fclose(fp);
+	return contents;
 }
 
 void screen(int width, int height, bool screen, char *title)
@@ -104,7 +122,7 @@ void screen(int width, int height, bool screen, char *title)
 	int32 tempWidth = screenWidth = width;
 	int32 tempHeight = screenHeight = height;
 
-	uint32 flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
+	uint32 flags = SDL_WINDOW_OPENGL;
 
 	//set to zero to scale the window to desired resolution without changing the desktop resolution
 	if (fullscreen)
@@ -125,10 +143,93 @@ void screen(int width, int height, bool screen, char *title)
 	else
 		SDL_GL_SetSwapInterval(0);
 
-	updateWindow(screenWidth, screenHeight);
+	//initialize GLEW
+	glewInit();
 
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glViewport(0, 0, screenWidth, screenHeight);
+	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
+	if (!glewIsSupported("GL_VERSION_3_3")) {
+		LOGERROR("OpenGL 3.3 not available");
+	}
+
+	LOG(glGetString(GL_VERSION));
+
+	/* build and compile shader program */
+	//const char *vertexShader = readFile("data/shaders/vertexshader2.vert");
+	//const char *fragmentShader = readFile("data/shaders/fragmentshader2.frag");
+
+	//vertex shader
+	int32 vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+	glCompileShader(vertexShader);
+
+	//check for compilation errors
+	int32 success;
+	char infoLog[512];
+	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+	if (!success)
+	{
+		glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+		LOG("Vertex shader error: " << infoLog);
+	}
+
+	//fragment shader
+	int32 fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+	glCompileShader(fragmentShader);
+
+	//check for compilation errors
+	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+	if (!success)
+	{
+		glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+		LOG("Fragment shader error: " << infoLog);
+	}
+
+	//link shaders to make the shaderprogram
+	shaderProgram = glCreateProgram();
+	glAttachShader(shaderProgram, vertexShader);
+	glAttachShader(shaderProgram, fragmentShader);
+	glLinkProgram(shaderProgram);
+
+	glDeleteShader(vertexShader);
+	glDeleteShader(fragmentShader);
+
+	/*real32 vertices[] = {
+		//first triangle
+		1.0f,  1.0f, 0.0f,	//top Right
+		1.0f, -1.0f, 0.0f,	//bottom Right
+		-1.0f,  1.0f, 0.0f, //top Left 
+		//second triangle
+		1.0f, -1.0f, 0.0f,	//bottom Right
+		-1.0f, -1.0f, 0.0f, //bottom Left
+		-1.0f,  1.0f, 0.0f  //top Left
+	};*/
+	
+	// Set up vertex data (and buffer(s)) and attribute pointers
+	real32 vertices[] = {
+		-0.5f, -0.5f, 0.0f, // Left  
+		0.5f, -0.5f, 0.0f, // Right 
+		0.0f, 0.5f, 0.0f  // Top   
+	};
+
+	//generate 1 vertex buffer object
+	glGenBuffers(1, &VBO);
+	//buffer calls to the GL_ARRAY_BUFFER targets the currently bound buffer (VBO)
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	//copies the vertex data into the buffer’s memory
+	//GL_STREAM_DRAW - the data will change every time it is drawn
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	
+	//position attribute pointer - tells opengl how our data buffer is structured
+	glVertexAttribPointer(0,	//index of vertex attribute to modify
+		3,						//size of the vertex attribute, number of components. The vertex attribute is a vec3 so it is composed of 3 values.
+		GL_FLOAT,				//data type of each component in the array
+		GL_FALSE,				//normalized = false
+		3 * sizeof(real32),	//stride, space between consecutive vertex attribute sets
+		(void*)0);			//offset, where to start read in the buffer
+	glEnableVertexAttribArray(0);
 }
 
 void quit()
@@ -182,14 +283,6 @@ int main(int argc, char** argv)
 		{
 			switch (event.type)
 			{
-				//Get new dimensions and repaint on window size change  
-				case SDL_WINDOWEVENT_SIZE_CHANGED:
-				{
-					screenWidth = event.window.data1;
-					screenHeight = event.window.data2;
-					updateWindow(screenWidth, screenHeight);
-				} break;
-
 				case SDL_KEYDOWN:
 				{
 					switch (event.key.keysym.sym)
@@ -259,18 +352,15 @@ int main(int argc, char** argv)
 		frameStart = SDL_GetTicks();
 
 		updateAndDraw(frameTime);
-		//update screen
-		SDL_GL_SwapWindow(window);
-
+		
 		uint64 endCycleCount = __rdtsc();
 		uint64 endCounter = SDL_GetPerformanceCounter();
 		uint64 counterElapsed = endCounter - lastCounter;
 		uint64 cyclesElapsed = endCycleCount - lastCycleCount;
+
 		real64 msPerFrame = (((1000.0f * (real64)counterElapsed) / (real64)performanceFrequency));
 		real64 fps = (real64)performanceFrequency / (real64)counterElapsed;
 		real64 megaCyclesPerFrame = ((real64)cyclesElapsed / (1000.0f * 1000.0f));
-		lastCycleCount = endCycleCount;
-		lastCounter = endCounter;
 
 #if defined(_DEBUG)        
 		char message[256];
@@ -279,7 +369,11 @@ int main(int argc, char** argv)
 		SDL_SetWindowTitle(window, message);
 		totalFrames++;
 #endif
-		
+		//update screen
+		SDL_GL_SwapWindow(window);
+
+		lastCycleCount = endCycleCount;
+		lastCounter = endCounter;
 	}
 #if defined(_DEBUG)   
 	printf("Running time: %d seconds\n", SDL_GetTicks() / 1000);
@@ -296,31 +390,29 @@ int main(int argc, char** argv)
 void setup()
 {
 	screen(960, 540, false, "opengl framework");
-	//setColor(Color::magenta);
 }
 
 void updateAndDraw(uint32 t)
 {
-	angle += 1;
-	//clear screen buffer
+	/*const GLfloat color[] = { (float)sin(SDL_GetTicks() / 1000), 0.5f, 0.0f, 1.0f };
+	glClearBufferfv(GL_COLOR, 0, color);
+	glUseProgram(shaderProgram);
+	glPointSize(40.0f);
+	glDrawArrays(GL_POINTS, 0, 1);
+	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
+	*/
 
-	//reset the modelview matrix, sets x,y,z to zero
-	glLoadIdentity();
+	const real32 color[] = { 0.2f, 0.3f, 0.3f, 1.0f };
+	glClearBufferfv(GL_COLOR, 0, color);
 
-	glTranslatef(0.0f, 0.0f, -10.0f);
-	glRotatef(angle, 0.0f, 0.0f, 0.5f);
-	glScalef(1.0f, 1.0f, 1.0f);
-	
-	//Begin triangle coordinates
-	glBegin(GL_TRIANGLES);
-		glColor3f(1.0, 0.0, 0.0);
-		glVertex3f(0.0f, 2.0f, 0.0f);
-		glColor3f(0.0, 1.0, 0.0);
-		glVertex3f(-2.0f, -2.0f, 0.0f);
-		glColor3f(0.0, 0.0, 1.0);
-		glVertex3f(2.0f, -2.0f, 0.0f);
-	glEnd();
+	//set shader program
+	glUseProgram(shaderProgram);
+	glBindVertexArray(VAO);
+	glDrawArrays(GL_TRIANGLES, 0, 3);
+	//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+
 }
 
 

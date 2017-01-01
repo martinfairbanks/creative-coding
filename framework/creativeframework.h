@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <stdlib.h> //srand
+#include <crtdbg.h> //memory leak check
 
 typedef int8_t int8;
 typedef int16_t int16;

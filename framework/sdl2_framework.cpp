@@ -5,8 +5,6 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
-
-#include <crtdbg.h> //memory leak check
 #include <sstream>	//sprintf
 #include <map>		//for keyPressed
 
