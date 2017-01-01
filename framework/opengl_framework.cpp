@@ -65,32 +65,37 @@ bool keyPressed(int32 key)
 	return false;
 }
 
-//set viewport and reset projection
-void updateWindow(int w, int h)
+void set2dProjection()
 {
-	real32 aspect;
-	real32 lightPos[] = { -50.f, 50.0f, 100.0f, 1.0f };
-
-	//prevent a divide by zero
-	if (h == 0)
-		h = 1;
-
-	//set viewport to window dimensions
-	glViewport(0, 0, w, h);
-
-	//reset coordinate system
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
-	aspect = (real32)w / (real32)h;
-	gluPerspective(35.0f, aspect, 1.0f, 225.0f);
+	gluOrtho2D(0, screenWidth, screenHeight, 0);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
+}
 
-	//glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
+void set3dProjection()
+{
+	//set viewport to window dimensions
+	glViewport(0, 0, screenWidth, screenHeight);
 
-	glTranslatef(0.0f, -0.4f, 0.0f);
+	//switch to the projection matrix and reset it
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+
+	//set camera perspective
+	gluPerspective(45.0f,								//camera angle, field of view in degrees, set to 45 degrees viewing angle
+		(GLfloat)screenWidth / (GLfloat)screenHeight,	//aspect ratio
+		1.0f,											//near z clipping coordinate
+		500.0f);										//far z clipping coordinate
+														//1.0f - 500.0f is the start and end point for how deep we can draw into the screen
+
+	//switch to GL_MODELVIEW, tells OGL that all future transformations will affect what we draw
+	//reset the modelview matrix, wich is where the object information is stored, sets x,y,z to zero
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
 }
 
 void screen(int width, int height, bool screen, char *title)
@@ -104,7 +109,7 @@ void screen(int width, int height, bool screen, char *title)
 	int32 tempWidth = screenWidth = width;
 	int32 tempHeight = screenHeight = height;
 
-	uint32 flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
+	uint32 flags = SDL_WINDOW_OPENGL;// | SDL_WINDOW_RESIZABLE;
 
 	//set to zero to scale the window to desired resolution without changing the desktop resolution
 	if (fullscreen)
@@ -125,7 +130,7 @@ void screen(int width, int height, bool screen, char *title)
 	else
 		SDL_GL_SetSwapInterval(0);
 
-	updateWindow(screenWidth, screenHeight);
+	set3dProjection();
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -187,7 +192,7 @@ int main(int argc, char** argv)
 				{
 					screenWidth = event.window.data1;
 					screenHeight = event.window.data2;
-					updateWindow(screenWidth, screenHeight);
+					set3dProjection();
 				} break;
 
 				case SDL_KEYDOWN:
@@ -301,6 +306,7 @@ void setup()
 
 void updateAndDraw(uint32 t)
 {
+	set3dProjection();
 	angle += 1;
 	//clear screen buffer
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -321,6 +327,17 @@ void updateAndDraw(uint32 t)
 		glColor3f(0.0, 0.0, 1.0);
 		glVertex3f(2.0f, -2.0f, 0.0f);
 	glEnd();
+
+	set2dProjection();
+	glColor3f(1.0f, 0.0f, 0.0f);
+
+	glBegin(GL_LINES);
+		glVertex2f(0, 0);
+		glVertex2f(100, 200);
+	glEnd();
+
+	//draw a filled rectangle
+	glRectf(10.0f, 10.0f, 25.0f, 25.0f);
 }
 
 
