@@ -5,7 +5,7 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
-#include <stdlib.h> //srand
+
 #include <crtdbg.h> //memory leak check
 #include <sstream>	//sprintf
 #include <map>		//for keyPressed
@@ -19,16 +19,6 @@ TTF_Font* font = 0;
 const Uint8 *keystates = 0;
 std::map<int, bool> keyArray;
 SDL_GameController *controllerHandle;
-int32 mouseX = 0;
-int32 mouseY = 0;
-uint32 mouseButton[3];
-
-enum MouseButtons
-{
-	LEFT = 1,
-	MIDDLE = 2,
-	RIGHT = 3
-};
 
 uint8 joyUp;
 uint8 joyDown;
@@ -49,8 +39,6 @@ int32 joyRightStickY;
 const int32 joyDeadZone = 8000;
 
 SDL_Texture *backbufferTexture;	//texture used for drawing with the pixelbuffer
-uint32 *pixelBuffer;			//pixelbuffer for pixel manipulation
-bool32 fillFlag = true;			//fill flag for shapes
 
 void setup();
 void updateAndDraw(uint32 t);
@@ -92,189 +80,6 @@ inline void flip()
 {
 	SDL_RenderPresent(renderer);
 };
-
-inline void fill()
-{
-	fillFlag = true;
-}
-
-inline void noFill()
-{
-	fillFlag = false;
-}
-
-/* clear the pixelbuffer with specific color */
-inline void clear(int32 col)
-{
-	//memset(pixelBuffer, color, screenWidth * screenHeight * 4);
-	void *memory = pixelBuffer;
-	int32 count = screenWidth * screenHeight;
-
-	/* memory fill */
-	_asm
-	{
-		cld								// clear the direction flag
-		mov edi, memory					// move pixelBuffer pointer into EDI
-		mov ecx, count					// ECX hold loop count
-		mov eax, col					// EAX hold value
-		rep stosd						// fill
-	}
-}
-
-inline void clear(uint8 r, uint8 g, uint8 b)
-{
-	uint32 col = r << 16 | g << 8 | b | 0xff000000;
-	void *memory = pixelBuffer;
-	int32 count = screenWidth * screenHeight;
-
-	_asm
-	{
-		cld								
-		mov edi, memory					
-		mov ecx, count					
-		mov eax, col					
-		rep stosd						
-	}
-}
-
-inline void clear(ColorRGB c)
-{
-	int32 col = c.r << 16 | c.g << 8 | c.b | 0xff000000;
-	void *memory = pixelBuffer;
-	int32 count = screenWidth * screenHeight;
-
-	_asm
-	{
-		cld								
-		mov edi, memory					
-		mov ecx, count					
-		mov eax, col					
-		rep stosd						
-	}
-}
-
-inline void pixel(int32 x, int32 y)
-{
-	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
-	int32 col = color.r << 16 | color.g << 8 | color.b | 0xff000000;
-	pixelBuffer[y*screenWidth + x] = col;
-}
-
-inline void pixel(int32 x, int32 y, uint8 R, uint8 G, uint8 B)
-{
-	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
-	int32 color = R << 16 | G << 8 | B | 0xff000000;
-	pixelBuffer[y*screenWidth + x] = color;
-}
-
-inline void pixel(int32 x, int32 y, uint32 col)
-{
-	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
-	pixelBuffer[y*screenWidth + x] = col;
-}
-
-inline void pixel(int32 x, int32 y, ColorRGB col)
-{
-	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
-	int32 c = col.r << 16 | col.g << 8 | col.b | 0xff000000;
-	pixelBuffer[y*screenWidth + x] = c;
-}
-
-//draws a line with Breshenam's algorithm
-inline void line(int32 x0, int32 y0, int32 x1, int32 y1)
-{
-	bool32 step = abs(x1 - x0) < abs(y1 - y0);
-
-	//rotate the line
-	if (step)
-	{
-		SWAP(x0, y0);
-		SWAP(x1, y1);
-	}
-
-	if (x1 < x0)
-	{
-		SWAP(x0, x1);
-		SWAP(y0, y1);
-	}
-
-	//Bresenham’s algorithm starts by plotting a pixel at the first coordinate of the line
-	//(x0, y0), and to x+1, it takes the difference of the y component of the line to the
-	//two possible y coordinates, and uses the y coordinate where the error is the smaller,
-	//and repeats this for every pixel.
-
-	real32 error = 0.0;
-
-	//line slope
-	real32 slope = (real32)abs(y1 - y0) / (x1 - x0);
-
-	//starting point
-	int32 y = y0;
-
-	int32 ystep = (y1 > y0 ? 1 : -1);
-
-	for (int32 i = x0; i < x1; i++)
-	{
-		if (step)
-			pixel(y, i);
-		else
-			pixel(i, y);
-
-		error += slope;
-
-		if (error >= 0.5)
-		{
-			y += ystep;
-			error -= 1.0;
-		}
-	}
-}
-
-//Bresenham circle algorithm
-inline void circle(int32 x0, int32 y0, int32 radius)
-{
-	if (fillFlag)
-	{
-		int32 x = radius;
-		int32 y = 0;
-		int32 err = 0;
-
-		while (x >= y)
-		{
-			pixel(x0 + x, y0 + y);
-			pixel(x0 + y, y0 + x);
-			pixel(x0 - y, y0 + x);
-			pixel(x0 - x, y0 + y);
-			pixel(x0 - x, y0 - y);
-			pixel(x0 - y, y0 - x);
-			pixel(x0 + y, y0 - x);
-			pixel(x0 + x, y0 - y);
-
-			y += 1;
-			err += 1 + 2 * y;
-			if (2 * (err - x) + 1 > 0)
-			{
-				x -= 1;
-				err += 1 - 2 * x;
-			}
-		}
-	}
-	else
-	{
-		int32 r2 = radius * radius;
-		int32 area = r2 << 2;
-		int32 rr = radius << 1;
-
-		for (int32 i = 0; i < area; i++)
-		{
-			int32 tx = (i % rr) - radius;
-			int32 ty = (i / rr) - radius;
-
-			if (tx * tx + ty * ty <= r2)
-				pixel(x0 + tx, y0 + ty);
-		}
-	}
-}
 
 /* SDL hardware rendering */
 inline void _setColor(int32 r, int32 g, int32 b)

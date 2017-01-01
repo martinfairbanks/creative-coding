@@ -23,16 +23,7 @@ int32 shaderProgram;
 const Uint8 *keystates = 0;
 std::map<int, bool> keyArray;
 SDL_GameController *controllerHandle;
-int32 mouseX = 0;
-int32 mouseY = 0;
-uint32 mouseButton[3];
 
-enum MouseButtons
-{
-	LEFT = 1,
-	MIDDLE = 2,
-	RIGHT = 3
-};
 
 uint8 joyUp;
 uint8 joyDown;
@@ -59,19 +50,17 @@ const char* vertexShaderSource =	"#version 430 core														\n"
 									"{																		\n"
 									"    gl_Position = vec4(0.0f, 0.0f, 0.5f, 1.0);							\n"
 									"}																		\n";
-									
+
+
 /* color of each fragment (pixel-sized area of the triangle) */
-const char *fragmentShaderSource =	"#version 430 core														\n"
+const char* fragmentShaderSource =	"#version 430 core														\n"
 									"																		\n"
 									"out vec4 color;														\n"
 									"																		\n"
 									"void main(void)														\n"
 									"{																		\n"
-									"    color = vec4(0.0, 0.8, 1.0, 1.0);									\n"
-									"}																		\n"; 
-
-void setup();
-void updateAndDraw(uint32 t);
+									"    color = vec4(0.0, 1.0, 0.0, 1.0);									\n"
+									"}																		\n";
 
 bool keyDown(int32 key)
 {
@@ -172,7 +161,7 @@ void screen(int width, int height, bool screen, char *title)
 	//const char *vertexShader = readFile("data/shaders/vertexshader2.vert");
 	//const char *fragmentShader = readFile("data/shaders/fragmentshader2.frag");
 
-	// Vertex shader
+	//vertex shader
 	int32 vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
 	glCompileShader(vertexShader);
@@ -201,7 +190,7 @@ void screen(int width, int height, bool screen, char *title)
 	}
 
 	//link shaders to make the shaderprogram
-	int32 shaderProgram = glCreateProgram();
+	shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, vertexShader);
 	glAttachShader(shaderProgram, fragmentShader);
 	glLinkProgram(shaderProgram);
@@ -227,24 +216,22 @@ void screen(int width, int height, bool screen, char *title)
 		0.0f, 0.5f, 0.0f  // Top   
 	};
 
-	glGenVertexArrays(1, &VAO);
-
-	//create 1 new vertex buffer object
+	//generate 1 vertex buffer object
 	glGenBuffers(1, &VBO);
-	
-	glBindVertexArray(VAO);
-
+	//buffer calls to the GL_ARRAY_BUFFER targets the currently bound buffer (VBO)
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	//copies the vertex data into the buffer’s memory
+	//GL_STREAM_DRAW - the data will change every time it is drawn
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
-	glEnableVertexAttribArray(0);
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0); 
-	glBindVertexArray(0); 
 	
-	//wireframe
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //default GL_FILL
+	//position attribute pointer - tells opengl how our data buffer is structured
+	glVertexAttribPointer(0,	//index of vertex attribute to modify
+		3,						//size of the vertex attribute, number of components. The vertex attribute is a vec3 so it is composed of 3 values.
+		GL_FLOAT,				//data type of each component in the array
+		GL_FALSE,				//normalized = false
+		3 * sizeof(real32),	//stride, space between consecutive vertex attribute sets
+		(void*)0);			//offset, where to start read in the buffer
+	glEnableVertexAttribArray(0);
 }
 
 void quit()
@@ -367,7 +354,7 @@ int main(int argc, char** argv)
 		frameStart = SDL_GetTicks();
 
 		updateAndDraw(frameTime);
-
+		
 		uint64 endCycleCount = __rdtsc();
 		uint64 endCounter = SDL_GetPerformanceCounter();
 		uint64 counterElapsed = endCounter - lastCounter;
@@ -405,7 +392,6 @@ int main(int argc, char** argv)
 void setup()
 {
 	screen(960, 540, false, "opengl framework");
-
 }
 
 void updateAndDraw(uint32 t)
@@ -419,7 +405,7 @@ void updateAndDraw(uint32 t)
 	glClear(GL_COLOR_BUFFER_BIT);
 	*/
 
-	const GLfloat color[] = { 0.3f, 0.0f, 0.3f, 1.0f };
+	const real32 color[] = { 0.2f, 0.3f, 0.3f, 1.0f };
 	glClearBufferfv(GL_COLOR, 0, color);
 
 	//set shader program
@@ -428,6 +414,7 @@ void updateAndDraw(uint32 t)
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 	//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
+
 }
 
 
