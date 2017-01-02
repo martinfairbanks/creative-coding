@@ -1,18 +1,20 @@
-	#define WIN32_LEAN_AND_MEAN				//#define WIN32_LEANER_AND_MEANER //#define VC_EXTRALEAN
+	/* Linking */
 	#pragma comment(lib, "user32.lib")
 	#pragma comment(lib, "gdi32.lib")
-	//#pragma comment(lib, "winmm.lib") 
 	#pragma comment(lib, "Xinput9_1_0.lib") //Xinput.lib
 
+	/* Includes */
+	#define WIN32_LEAN_AND_MEAN				//#define WIN32_LEANER_AND_MEANER //#define VC_EXTRALEAN
 	#include <Windows.h>
 	#include <Xinput.h>
+	#define WINDOWS
 	#include "creativeframework.h"
-
+	
+	/* Globals */
 	HWND		hWnd;						//handle to the window.
 	HINSTANCE	instance;					//handle to this application
 	HDC			deviceContext = NULL;		//GDI Device Context
 	TEXTMETRIC	tm;							//system font
-
 	static int xOffset;
 	static int yOffset;
 	
@@ -25,13 +27,13 @@
 
 	static screenBuffer backBuffer;
 
-static inline void _pixel(int32 x, int32 y)
+inline void _pixel(int32 x, int32 y)
 {
 	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
 	SetPixel(deviceContext, x, y, RGB(color.r, color.g, color.b));
 }
 
-static inline void _pixel(int32 x, int32 y, uint32 col)
+inline void _pixel(int32 x, int32 y, uint32 col)
 {
 	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
 	uint8 r = (col & 0b00000000111111110000000000000000) >> 16;
@@ -40,13 +42,13 @@ static inline void _pixel(int32 x, int32 y, uint32 col)
 	SetPixel(deviceContext, x, y, RGB(r, g, b));
 }
 
-static inline void _pixel(int32 x, int32 y, uint8 r, uint8 g, uint8 b)
+inline void _pixel(int32 x, int32 y, uint8 r, uint8 g, uint8 b)
 {
 	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
 	SetPixel(deviceContext, x, y, RGB(r, g, b));
 }
 
-static inline void _pixel(int32 x, int32 y, ColorRGB col)
+inline void _pixel(int32 x, int32 y, ColorRGB col)
 {
 	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
 	SetPixel(deviceContext, x, y, RGB(col.r, col.g, col.b));
@@ -94,7 +96,7 @@ inline void _circle(int32 x0, int32 y0, int32 radius)
 	DeleteObject(pen);
 }
 
-static inline void uploadPixels()
+inline void uploadPixels()
 {
 	//rect to rect copy,copy from one buffer to another and stretches it if needed to fit the destination
 	StretchDIBits(deviceContext,
@@ -106,7 +108,7 @@ static inline void uploadPixels()
 		SRCCOPY);							//raster-operation 
 }
 
-static inline void print(char *message, int x, int y)
+inline void print(char *message, int x, int y)
 {
 	SetBkMode(deviceContext, OPAQUE); //TRANSPARENT
 	SetTextColor(deviceContext, RGB(color.r, color.g, color.b));

@@ -102,6 +102,17 @@ void setColor(ColorRGB col)
 	color = col;
 }
 
+inline void fill()
+{
+	fillFlag = true;
+}
+
+inline void noFill()
+{
+	fillFlag = false;
+}
+
+#if defined(SDL2) | defined(WINDOWS)
 /* clear the pixelbuffer with specific color */
 inline void clear(int32 col)
 {
@@ -150,16 +161,6 @@ inline void clear(ColorRGB c)
 		mov eax, col
 		rep stosd
 	}
-}
-
-inline void fill()
-{
-	fillFlag = true;
-}
-
-inline void noFill()
-{
-	fillFlag = false;
 }
 
 inline void pixel(int32 x, int32 y)
@@ -285,3 +286,4 @@ inline void circle(int32 x0, int32 y0, int32 radius)
 		}
 	} 
 }
+#endif

@@ -74,6 +74,8 @@ void set2dProjection()
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
+
+	glDisable(GL_DEPTH_TEST);
 }
 
 void set3dProjection()
@@ -96,6 +98,70 @@ void set3dProjection()
 	//reset the modelview matrix, wich is where the object information is stored, sets x,y,z to zero
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
+
+	//enable depth buffer
+	glEnable(GL_DEPTH_TEST);
+}
+
+inline void _line(int32 x0, int32 y0, int32 x1, int32 y1)
+{
+	glBegin(GL_LINES);
+	glVertex2f(x0, y0);
+	glVertex2f(x1, y1);
+	glEnd();
+}
+
+inline void _pixel(int32 x, int32 y)
+{
+	glBegin(GL_POINTS);
+	glVertex2f(x, y);
+	glEnd();
+}
+
+inline void _rect(int x, int y, int width, int height)
+{
+	if (fillFlag)
+	{
+		glBegin(GL_QUADS);
+		glVertex2f(x, y);
+		glVertex2f(x + width, y);
+		glVertex2f(x + width, y + height);
+		glVertex2f(x, y + height);
+		glEnd();
+	}
+	else
+	{
+		glBegin(GL_LINE_LOOP);
+		glVertex2f(x, y);
+		glVertex2f(x + width, y);
+		glVertex2f(x + width, y + height);
+		glVertex2f(x, y + height);
+		glEnd();
+	}
+}
+
+inline void _circle(int32 x, int32 y, int32 radius)
+{
+	if (fillFlag)
+	{
+		glBegin(GL_TRIANGLE_FAN);
+		glVertex2f(x, y);
+		for (int angle = 0; angle < 360; angle++)
+		{
+			glVertex2f(x + sin(angle) * radius, y + cos(angle) * radius);
+		}
+		glEnd();
+	}
+	else
+	{
+		//TODO: fix this!
+		glBegin(GL_LINE_LOOP);
+		for (int angle = 0; angle < 360; angle++)
+		{
+			glVertex2f(x + sin(angle) * radius, y + cos(angle) * radius);
+		}
+		glEnd();
+	}
 }
 
 void screen(int width, int height, bool screen, char *title)
@@ -190,9 +256,9 @@ int main(int argc, char** argv)
 				//Get new dimensions and repaint on window size change  
 				case SDL_WINDOWEVENT_SIZE_CHANGED:
 				{
-					screenWidth = event.window.data1;
+					/*screenWidth = event.window.data1;
 					screenHeight = event.window.data2;
-					set3dProjection();
+					set3dProjection();*/
 				} break;
 
 				case SDL_KEYDOWN:
@@ -307,9 +373,10 @@ void setup()
 void updateAndDraw(uint32 t)
 {
 	set3dProjection();
+	fill();
 	angle += 1;
 	//clear screen buffer
-	glClear(GL_COLOR_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	//reset the modelview matrix, sets x,y,z to zero
 	glLoadIdentity();
@@ -331,10 +398,12 @@ void updateAndDraw(uint32 t)
 	set2dProjection();
 	glColor3f(1.0f, 0.0f, 0.0f);
 
-	glBegin(GL_LINES);
-		glVertex2f(0, 0);
-		glVertex2f(100, 200);
-	glEnd();
+	_line(50, 50, 400, 300);
+	glColor3f(1.0f, 0.0f, 1.0f);
+	_pixel(10, 400);
+	_circle(screenWidth / 2, screenHeight / 2, 50);
+	noFill();
+	_rect(600, 30, 50, 50);
 
 	//draw a filled rectangle
 	glRectf(10.0f, 10.0f, 25.0f, 25.0f);

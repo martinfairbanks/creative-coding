@@ -8,6 +8,7 @@
 #include <sstream>	//sprintf
 #include <map>		//for keyPressed
 
+#define SDL2
 #include "creativeframework.h"
 
 /* Globals */

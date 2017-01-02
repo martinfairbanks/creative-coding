@@ -1,64 +1,62 @@
-/* Linking */
-#pragma comment(lib, "SDL2.lib")
-#pragma comment(lib, "SDL2main.lib")
-#pragma comment(lib, "opengl32.lib")
-//#pragma comment(lib, "glu32.lib")
-#pragma comment(lib, "glew32.lib")
+	/* Linking */
+	#pragma comment(lib, "SDL2.lib")
+	#pragma comment(lib, "SDL2main.lib")
+	#pragma comment(lib, "opengl32.lib")
+	//#pragma comment(lib, "glu32.lib")
+	#pragma comment(lib, "glew32.lib")
 
-#include <SDL2/SDL.h>
-#include <GL/glew.h>
-#include <gl/glu.h>
-#include <map>		//for keyPressed
+	#include <SDL2/SDL.h>
+	#include <GL/glew.h>
+	#include <gl/glu.h>
+	#include <map>		//for keyPressed
+	#include "creativeframework.h"
 
-#include "creativeframework.h"
+	/* Globals */
+	SDL_GLContext glContext;
+	SDL_Window *window = 0;
+	uint32 VBO;	//vertex buffer object id
+	uint32 VAO;	//vertex array object id
+	int32 shaderProgram;
+	const Uint8 *keystates = 0;
+	std::map<int, bool> keyArray;
+	SDL_GameController *controllerHandle;
 
-/* Globals */
-SDL_GLContext glContext;
-SDL_Window *window = 0;
-uint32 VBO;	//vertex buffer object id
-uint32 VAO;	//vertex array object id
-int32 shaderProgram;
-const Uint8 *keystates = 0;
-std::map<int, bool> keyArray;
-SDL_GameController *controllerHandle;
+	uint8 joyUp;
+	uint8 joyDown;
+	uint8 joyLeft;
+	uint8 joyRight;
+	uint8 joyStart;
+	uint8 joyBack;
+	uint8 joyLeftShoulder;
+	uint8 joyRightShoulder;
+	uint8 joyAButton;
+	uint8 joyBButton;
+	uint8 joyXButton;
+	uint8 joyYButton;
+	int32 joyStickX;
+	int32 joyStickY;
+	int32 joyRightStickX;
+	int32 joyRightStickY;
+	const int32 joyDeadZone = 8000;
 
-
-uint8 joyUp;
-uint8 joyDown;
-uint8 joyLeft;
-uint8 joyRight;
-uint8 joyStart;
-uint8 joyBack;
-uint8 joyLeftShoulder;
-uint8 joyRightShoulder;
-uint8 joyAButton;
-uint8 joyBButton;
-uint8 joyXButton;
-uint8 joyYButton;
-int32 joyStickX;
-int32 joyStickY;
-int32 joyRightStickX;
-int32 joyRightStickY;
-const int32 joyDeadZone = 8000;
-
-/* position of each vertex point */
-const char* vertexShaderSource =	"#version 430 core														\n"
-									"																		\n"
-									"void main(void)														\n"
-									"{																		\n"
-									"    gl_Position = vec4(0.0f, 0.0f, 0.5f, 1.0);							\n"
-									"}																		\n";
+	/* position of each vertex point */
+	const char* vertexShaderSource =	"#version 430 core														\n"
+										"																		\n"
+										"void main(void)														\n"
+										"{																		\n"
+										"    gl_Position = vec4(0.0f, 0.0f, 0.5f, 1.0);							\n"
+										"}																		\n";
 
 
-/* color of each fragment (pixel-sized area of the triangle) */
-const char* fragmentShaderSource =	"#version 430 core														\n"
-									"																		\n"
-									"out vec4 color;														\n"
-									"																		\n"
-									"void main(void)														\n"
-									"{																		\n"
-									"    color = vec4(0.0, 1.0, 0.0, 1.0);									\n"
-									"}																		\n";
+	/* color of each fragment (pixel-sized area of the triangle) */
+	const char* fragmentShaderSource =	"#version 430 core														\n"
+										"																		\n"
+										"out vec4 color;														\n"
+										"																		\n"
+										"void main(void)														\n"
+										"{																		\n"
+										"    color = vec4(0.0, 1.0, 0.0, 1.0);									\n"
+										"}																		\n";
 
 bool keyDown(int32 key)
 {
