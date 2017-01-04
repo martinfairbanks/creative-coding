@@ -1,46 +1,45 @@
-﻿/* Linking */
-#pragma comment(lib, "SDL2.lib")
-#pragma comment(lib, "SDL2main.lib")
-#pragma comment(lib, "SDL2_ttf.lib")
+﻿	/* Linking */
+	#pragma comment(lib, "SDL2.lib")
+	#pragma comment(lib, "SDL2main.lib")
+	#pragma comment(lib, "SDL2_ttf.lib")
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_ttf.h>
-#include <sstream>	//sprintf
-#include <map>		//for keyPressed
+	/* Includes */
+	#include <SDL2/SDL.h>
+	#include <SDL2/SDL_ttf.h>
+	#include <sstream>	//sprintf
+	#include <map>		//for keyPressed
+	//#define SDL2 1
+	//#include "creativeframework.cpp"
 
-#define SDL2
-#include "creativeframework.h"
+	/* Globals */
+	SDL_Renderer *renderer = 0;
+	SDL_Window *window = 0;
+	TTF_Font* font = 0;
+	SDL_Texture *backbufferTexture;	//texture used for drawing using the pixelbuffer
 
-/* Globals */
-SDL_Renderer *renderer = 0;
-SDL_Window *window = 0;
-TTF_Font* font = 0;
-const Uint8 *keystates = 0;
-std::map<int, bool> keyArray;
-SDL_GameController *controllerHandle;
+	const Uint8 *keystates = 0;
+	std::map<int, bool> keyArray;
+	SDL_GameController *controllerHandle;
+	uint8 joyUp;
+	uint8 joyDown;
+	uint8 joyLeft;
+	uint8 joyRight;
+	uint8 joyStart;
+	uint8 joyBack;
+	uint8 joyLeftShoulder;
+	uint8 joyRightShoulder;
+	uint8 joyAButton;
+	uint8 joyBButton;
+	uint8 joyXButton;
+	uint8 joyYButton;
+	int32 joyStickX;
+	int32 joyStickY;
+	int32 joyRightStickX;
+	int32 joyRightStickY;
+	const int32 joyDeadZone = 8000;
 
-uint8 joyUp;
-uint8 joyDown;
-uint8 joyLeft;
-uint8 joyRight;
-uint8 joyStart;
-uint8 joyBack;
-uint8 joyLeftShoulder;
-uint8 joyRightShoulder;
-uint8 joyAButton;
-uint8 joyBButton;
-uint8 joyXButton;
-uint8 joyYButton;
-int32 joyStickX;
-int32 joyStickY;
-int32 joyRightStickX;
-int32 joyRightStickY;
-const int32 joyDeadZone = 8000;
-
-SDL_Texture *backbufferTexture;	//texture used for drawing with the pixelbuffer
-
-void setup();
-void updateAndDraw(uint32 t);
+	void setup();
+	void updateAndDraw(uint32 t);
 
 bool keyDown(int32 key)
 {
@@ -81,27 +80,33 @@ inline void flip()
 };
 
 /* SDL hardware rendering */
-inline void _setColor(int32 r, int32 g, int32 b)
+inline void clear_(ColorRGB col)
+{
+	SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, 255);
+	SDL_RenderClear(renderer);
+}
+
+inline void setColor_(int32 r, int32 g, int32 b)
 {
 	SDL_SetRenderDrawColor(renderer, r, g, b, 0xff);
 }
 
-inline void _setColor(ColorRGB col)
+inline void setColor_(ColorRGB col)
 {
 	SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, 0xff);
 }
 
-inline void _pixel(int32 x, int32 y)
+inline void pixel_(int32 x, int32 y)
 {
 	SDL_RenderDrawPoint(renderer, x, y);
 }
 
-inline void _line(int32 x0, int32 y0, int32 x1, int32 y1)
+inline void line_(int32 x0, int32 y0, int32 x1, int32 y1)
 {
 	SDL_RenderDrawLine(renderer, x0, y0, x1, y1);
 }
 
-inline void _circle(int32 x0, int32 y0, int32 radius)
+inline void circle_(int32 x0, int32 y0, int32 radius)
 {
 	if (fillFlag)
 	{
@@ -146,7 +151,7 @@ inline void _circle(int32 x0, int32 y0, int32 radius)
 	}
 }
 
-inline void _rect(int xPos, int yPos, int width, int height)
+inline void rect_(int xPos, int yPos, int width, int height)
 {
 	SDL_Rect rect = { xPos, yPos, width, height };
 	if (fillFlag)
@@ -182,7 +187,7 @@ void screen(int32 width, int32 height, bool32 screen, char *title)
 	int32 tempWidth = screenWidth = width;
 	int32 tempHeight = screenHeight = height;
 
-	uint32 flags = SDL_WINDOW_RESIZABLE; //SDL_WINDOW_SHOWN
+	uint32 flags = SDL_WINDOW_SHOWN;//SDL_WINDOW_RESIZABLE
 
 	//set to zero to scale the window to desired resolution without changing the desktop resolution
 	if (fullscreen)
@@ -220,7 +225,7 @@ void screen(int32 width, int32 height, bool32 screen, char *title)
 	controllerHandle = SDL_GameControllerOpen(0);
 	SDL_GetMouseState(&mouseX, &mouseY);
 
-	for (int32 i = 1; i <= 3; i++)
+	for (int32 i = 0; i <= 2; i++)
 	{
 		mouseButton[i] = SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(i);
 	}
@@ -237,6 +242,7 @@ void quit()
 	SDL_GameControllerClose(controllerHandle);
 	TTF_CloseFont(font);
 	TTF_Quit();
+	SDL_DestroyTexture(backbufferTexture);
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
@@ -342,7 +348,7 @@ int main(int argc, char** argv)
 		keystates = SDL_GetKeyboardState(NULL);
 		SDL_GetMouseState(&mouseX, &mouseY);
 
-		for (int i = 1; i <= 3; i++)
+		for (int i = 0; i <= 2; i++)
 		{
 			mouseButton[i] = SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(i);
 		}
@@ -390,53 +396,3 @@ int main(int argc, char** argv)
 	return 0;
 }
 
-void setup()
-{
-	screen(960, 540, false, "creative coding");
-
-}
-
-void updateAndDraw(uint32 t)
-{
-	/*static int x = 400;
-
-	if (joyStickX < -joyDeadZone || keyPressed(SDL_SCANCODE_D))
-		x++;
-
-	if (joyStickX > joyDeadZone || keyPressed(SDL_SCANCODE_A))
-		x--;
-
-	SDL_SetRenderDrawColor(renderer, 0x65, 0x9C, 0xEF, 255);
-	SDL_RenderClear(renderer);
-
-	SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0x00, 0xFF);
-	SDL_RenderDrawPoint(renderer, x, 240);*/
-
-	clear(0x659CEF);
-	clear(Color::cyan);
-	clear(0xff, 0xff, 0xff);
-	clear(0x659CEF);
-	color = Color::red;
-	pixel(400, 100);
-	pixel(401, 100);
-	pixel(400, 101);
-	pixel(401, 101);
-	line(0, 0, 200, 200);
-	circle(200, 200, 40);
-	noFill();
-	color = Color::magenta;
-	circle(400, 400, 60);
-	uploadPixels();
-
-	_setColor(Color::green);
-	fill();
-	_rect(100, 100, 50, 50);
-	_circle(200, 200, 50);
-	_setColor(Color::yellow);
-	_pixel(400, 400);
-	_line(400, 500, 300, 200);
-
-}
-
-
-void shutdown() { }

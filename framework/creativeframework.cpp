@@ -1,4 +1,3 @@
-#pragma once
 #include <stdint.h>
 #include <stdlib.h> //srand
 #include <crtdbg.h> //memory leak check
@@ -87,6 +86,16 @@ enum MouseButtons
 	RIGHT = 2
 };
 
+//#include "sdl2_framework.cpp"
+
+#if SDL2
+	#include "sdl2_framework.cpp"
+#endif
+
+#if WIN_32
+	#include "win32_framework.cpp"
+#endif
+
 void setup();
 void updateAndDraw(uint32 t);
 
@@ -123,11 +132,11 @@ inline void clear(int32 col)
 	/* memory fill */
 	_asm
 	{
-		cld								// clear the direction flag
-		mov edi, memory					// move pixelBuffer pointer into EDI
-		mov ecx, count					// ECX hold loop count
-		mov eax, col					// EAX hold value
-		rep stosd						// fill
+		cld								//clear direction flag
+		mov edi, memory					//move pixelBuffer pointer into edi
+		mov ecx, count					//move loop counter into ecx
+		mov eax, col					//move color into eax
+		rep stosd						//fill memory
 	}
 }
 

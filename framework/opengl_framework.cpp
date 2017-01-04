@@ -103,7 +103,7 @@ void set3dProjection()
 	glEnable(GL_DEPTH_TEST);
 }
 
-inline void _line(int32 x0, int32 y0, int32 x1, int32 y1)
+inline void line_(int32 x0, int32 y0, int32 x1, int32 y1)
 {
 	glBegin(GL_LINES);
 	glVertex2f(x0, y0);
@@ -111,14 +111,14 @@ inline void _line(int32 x0, int32 y0, int32 x1, int32 y1)
 	glEnd();
 }
 
-inline void _pixel(int32 x, int32 y)
+inline void pixel_(int32 x, int32 y)
 {
 	glBegin(GL_POINTS);
 	glVertex2f(x, y);
 	glEnd();
 }
 
-inline void _rect(int x, int y, int width, int height)
+inline void rect_(int x, int y, int width, int height)
 {
 	if (fillFlag)
 	{
@@ -140,7 +140,7 @@ inline void _rect(int x, int y, int width, int height)
 	}
 }
 
-inline void _circle(int32 x, int32 y, int32 radius)
+inline void circle_(int32 x, int32 y, int32 radius)
 {
 	if (fillFlag)
 	{
@@ -155,8 +155,9 @@ inline void _circle(int32 x, int32 y, int32 radius)
 	else
 	{
 		//TODO: fix this!
-		glBegin(GL_LINE_LOOP);
-		for (int angle = 0; angle < 360; angle++)
+		glLineWidth(1);
+		glBegin(GL_LINE_STRIP);
+		for (float angle = 0; angle < PI32*4; angle += (PI32 / 50.0f))
 		{
 			glVertex2f(x + sin(angle) * radius, y + cos(angle) * radius);
 		}
@@ -199,7 +200,6 @@ void screen(int width, int height, bool screen, char *title)
 	set3dProjection();
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-
 }
 
 void quit()
@@ -398,12 +398,13 @@ void updateAndDraw(uint32 t)
 	set2dProjection();
 	glColor3f(1.0f, 0.0f, 0.0f);
 
-	_line(50, 50, 400, 300);
+	line_(50, 50, 400, 300);
 	glColor3f(1.0f, 0.0f, 1.0f);
-	_pixel(10, 400);
-	_circle(screenWidth / 2, screenHeight / 2, 50);
+	pixel_(10, 400);
 	noFill();
-	_rect(600, 30, 50, 50);
+	circle_(screenWidth / 2, screenHeight / 2, 250);
+	
+	rect_(600, 30, 50, 50);
 
 	//draw a filled rectangle
 	glRectf(10.0f, 10.0f, 25.0f, 25.0f);

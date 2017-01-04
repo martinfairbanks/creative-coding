@@ -5,6 +5,7 @@
 	//#pragma comment(lib, "glu32.lib")
 	#pragma comment(lib, "glew32.lib")
 
+	/* Includes */
 	#include <SDL2/SDL.h>
 	#include <GL/glew.h>
 	#include <gl/glu.h>
