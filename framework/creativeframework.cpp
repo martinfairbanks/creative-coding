@@ -32,9 +32,9 @@ typedef double real64;
 				exit(1);
 #define Assert(expression) if(!(expression)) { *(int *)0 = 0; }
 #else
-#define LOG(x) 
-#define LOGERROR(x)
-#define Assert(expression)
+	#define LOG(x) 
+	#define LOGERROR(x)
+	#define Assert(expression)
 #endif
 
 int32 screenWidth;
@@ -86,16 +86,6 @@ enum MouseButtons
 	RIGHT = 2
 };
 
-//#include "sdl2_framework.cpp"
-
-#if SDL2
-	#include "sdl2_framework.cpp"
-#endif
-
-#if WIN_32
-	#include "win32_framework.cpp"
-#endif
-
 void setup();
 void updateAndDraw(uint32 t);
 
@@ -120,6 +110,17 @@ inline void noFill()
 {
 	fillFlag = false;
 }
+
+//#include "sdl2_framework.cpp"
+
+#if SDL2
+	#include "sdl2_framework.cpp"
+#endif
+
+#if WIN_32
+	#include "win32_framework.cpp"
+#endif
+
 
 #if defined(SDL2) | defined(WINDOWS)
 /* clear the pixelbuffer with specific color */
@@ -179,17 +180,17 @@ inline void pixel(int32 x, int32 y)
 	pixelBuffer[y*screenWidth + x] = col;
 }
 
-inline void pixel(int32 x, int32 y, uint8 R, uint8 G, uint8 B)
-{
-	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
-	int32 color = R << 16 | G << 8 | B | 0xff000000;
-	pixelBuffer[y*screenWidth + x] = color;
-}
-
 inline void pixel(int32 x, int32 y, uint32 col)
 {
 	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
 	pixelBuffer[y*screenWidth + x] = col;
+}
+
+inline void pixel(int32 x, int32 y, uint8 r, uint8 g, uint8 b)
+{
+	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
+	int32 color = r << 16 | g << 8 | b | 0xff000000;
+	pixelBuffer[y*screenWidth + x] = color;
 }
 
 inline void pixel(int32 x, int32 y, ColorRGB col)
@@ -200,39 +201,39 @@ inline void pixel(int32 x, int32 y, ColorRGB col)
 }
 
 //draws a line with Breshenam's algorithm
-inline void line(int32 x0, int32 y0, int32 x1, int32 y1)
+inline void line(int32 x1, int32 y1, int32 x2, int32 y2)
 {
-	bool32 step = abs(x1 - x0) < abs(y1 - y0);
+	bool32 step = abs(x2 - x1) < abs(y2 - y1);
 
 	//rotate the line
 	if (step)
 	{
-		SWAP(x0, y0);
 		SWAP(x1, y1);
+		SWAP(x2, y2);
 	}
 
-	if (x1 < x0)
+	if (x2 < x1)
 	{
-		SWAP(x0, x1);
-		SWAP(y0, y1);
+		SWAP(x1, x2);
+		SWAP(y1, y2);
 	}
 
 	//Bresenham’s algorithm starts by plotting a pixel at the first coordinate of the line
-	//(x0, y0), and to x+1, it takes the difference of the y component of the line to the
+	//(x1, y1), and to x+1, it takes the difference of the y component of the line to the
 	//two possible y coordinates, and uses the y coordinate where the error is the smaller,
 	//and repeats this for every pixel.
 
 	real32 error = 0.0;
 
 	//line slope
-	real32 slope = (real32)abs(y1 - y0) / (x1 - x0);
+	real32 slope = (real32)abs(y2 - y1) / (x2 - x1);
 
 	//starting point
-	int32 y = y0;
+	int32 y = y1;
 
-	int32 ystep = (y1 > y0 ? 1 : -1);
+	int32 ystep = (y2 > y1 ? 1 : -1);
 
-	for (int32 i = x0; i < x1; i++)
+	for (int32 i = x1; i < x2; i++)
 	{
 		if (step)
 			pixel(y, i);
@@ -249,8 +250,42 @@ inline void line(int32 x0, int32 y0, int32 x1, int32 y1)
 	}
 }
 
+inline void rect(int x, int y, int width, int height)
+{
+	if (fillFlag)
+	{
+		//save values
+		int tempX = x;
+		int tempW = width;
+
+		while (height--)
+		{
+			//draw horizontal line
+			while (width--)
+			{
+				pixel(x, y);
+				x++;
+			}
+
+			//next row
+			width = tempW;
+			x = tempX;
+			y++;
+		}
+	}
+	else
+	{
+		//draw non filled rect
+		line(x, y, x + width, y);
+		line(x, y, x, y + height);
+		line(x, y + height, x + width, y + height);
+		line(x + width, y, x + width, y + height);
+	}
+
+}
+
 //Bresenham circle algorithm
-inline void circle(int32 x0, int32 y0, int32 radius)
+inline void circle(int32 x, int32 y, int32 radius)
 {
 	if (fillFlag)
 	{
@@ -265,32 +300,32 @@ inline void circle(int32 x0, int32 y0, int32 radius)
 			int32 ty = (i / rr) - radius;
 
 			if (tx * tx + ty * ty <= r2)
-				pixel(x0 + tx, y0 + ty);
+				pixel(x + tx, y + ty);
 		}
 	}
 	else
 	{
-		int32 x = radius;
-		int32 y = 0;
+		int32 x1 = radius;
+		int32 y1 = 0;
 		int32 err = 0;
 
-		while (x >= y)
+		while (x1 >= y1)
 		{
-			pixel(x0 + x, y0 + y);
-			pixel(x0 + y, y0 + x);
-			pixel(x0 - y, y0 + x);
-			pixel(x0 - x, y0 + y);
-			pixel(x0 - x, y0 - y);
-			pixel(x0 - y, y0 - x);
-			pixel(x0 + y, y0 - x);
-			pixel(x0 + x, y0 - y);
+			pixel(x + x1, y + y1);
+			pixel(x + y1, y + x1);
+			pixel(x - y1, y + x1);
+			pixel(x - x1, y + y1);
+			pixel(x - x1, y - y1);
+			pixel(x - y1, y - x1);
+			pixel(x + y1, y - x1);
+			pixel(x + x1, y - y1);
 
-			y += 1;
-			err += 1 + 2 * y;
-			if (2 * (err - x) + 1 > 0)
+			y1 += 1;
+			err += 1 + 2 * y1;
+			if (2 * (err - x1) + 1 > 0)
 			{
-				x -= 1;
-				err += 1 - 2 * x;
+				x1 -= 1;
+				err += 1 - 2 * x1;
 			}
 		}
 	} 

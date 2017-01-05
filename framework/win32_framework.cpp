@@ -1,3 +1,8 @@
+	/* TODO:	rect_
+				setColor_
+				clear_
+	*/
+
 	/* Linking */
 	#pragma comment(lib, "user32.lib")
 	#pragma comment(lib, "gdi32.lib")
@@ -8,7 +13,7 @@
 	#include <Windows.h>
 	#include <Xinput.h>
 	#define WINDOWS
-	#include "creativeframework.h"
+	//#include "creativeframework.h"
 	
 	/* Globals */
 	HWND		hWnd;						//handle to the window.
@@ -27,34 +32,42 @@
 
 	static screenBuffer backBuffer;
 
-inline void _pixel(int32 x, int32 y)
+/* Win32 drawing functions */
+inline void clear_(ColorRGB col)
+{
+	HBRUSH brush = CreateSolidBrush(RGB(col.r, col.g, col.b));
+	SelectObject(deviceContext, brush);
+	Rectangle(deviceContext, 0, 0, screenWidth, screenHeight);
+}
+
+inline void pixel_(int32 x, int32 y)
 {
 	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
 	SetPixel(deviceContext, x, y, RGB(color.r, color.g, color.b));
 }
 
-inline void _pixel(int32 x, int32 y, uint32 col)
+inline void pixel_(int32 x, int32 y, uint32 col)
 {
 	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
-	uint8 r = (col & 0b00000000111111110000000000000000) >> 16;
-	uint8 g = (col & 0b00000000000000001111111100000000) >> 8;
-	uint8 b = (col & 0b00000000000000000000000011111111);
+	uint8 r = col >> 16;
+	uint8 g = col >> 8;
+	uint8 b = col;
 	SetPixel(deviceContext, x, y, RGB(r, g, b));
 }
 
-inline void _pixel(int32 x, int32 y, uint8 r, uint8 g, uint8 b)
+inline void pixel_(int32 x, int32 y, uint8 r, uint8 g, uint8 b)
 {
 	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
 	SetPixel(deviceContext, x, y, RGB(r, g, b));
 }
 
-inline void _pixel(int32 x, int32 y, ColorRGB col)
+inline void pixel_(int32 x, int32 y, ColorRGB col)
 {
 	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
 	SetPixel(deviceContext, x, y, RGB(col.r, col.g, col.b));
 }
 
-inline void _line(int32 x0, int32 y0, int32 x1, int32 y1)
+inline void line_(int32 x0, int32 y0, int32 x1, int32 y1)
 {
 	//create a colored pen
 	HPEN hpen = CreatePen(PS_SOLID, 1, RGB(color.r, color.g, color.b));
@@ -73,27 +86,34 @@ inline void _line(int32 x0, int32 y0, int32 x1, int32 y1)
 	DeleteObject(hpen);
 }
 
-
-inline void _circle(int32 x0, int32 y0, int32 radius)
+inline void rect_(int32 x, int32 y, int32 width, int32 height)
 {
-	//create the pens and brushes
-	HPEN   pen = CreatePen(PS_SOLID, 1, RGB(color.r, color.g, color.b));
-	//HBRUSH brush = CreateSolidBrush(RGB(color.r, color.g, color.b));
-	SelectObject(deviceContext, pen);
+	HBRUSH brush = CreateSolidBrush(RGB(color.r, color.g, color.b)); 
+	SelectObject(deviceContext, brush); 
+	Rectangle(deviceContext, x, y, x + width, y + height);
+}
 
+//TODO: Check: SelectObject.
+inline void circle_(int32 x, int32 y, int32 radius)
+{
+	HPEN oldpen = CreatePen(PS_SOLID, 1, RGB(color.r, color.g, color.b));
+	
 	if (fillFlag)
 	{
-		HBRUSH brush = CreateSolidBrush(RGB(color.r, color.g, color.b));
-		SelectObject(deviceContext, brush);
-		Ellipse(deviceContext, x0, y0, x0 + radius, y0 + radius);
-		DeleteObject(brush);
+		//HBRUSH brush = CreateSolidBrush(RGB(color.r, color.g, color.b));
+		SelectObject(deviceContext, CreateSolidBrush(RGB(color.r, color.g, color.b)));
+		Ellipse(deviceContext, x, y, x + radius, y + radius);
+		//DeleteObject(brush);
 	}
 	else
 	{
-		//TODO: get this to work!
-		Ellipse(deviceContext, x0, y0, x0 + radius, y0 + radius);
+		HBRUSH oldbrush = (HBRUSH)SelectObject(deviceContext, GetStockObject(NULL_BRUSH));
+		Ellipse(deviceContext, x, y, x + radius, y + radius);
+		SelectObject(deviceContext, oldbrush);
+		//DeleteObject(oldbrush);
 	}
-	DeleteObject(pen);
+	SelectObject(deviceContext, oldpen);
+	DeleteObject(oldpen);
 }
 
 inline void uploadPixels()
@@ -335,7 +355,6 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
 	#endif
 		lastCounter = endCounter;
 		lastCycleCount = endCycleCount;
-		ReleaseDC(hWnd, deviceContext);
 	}
 
 	//release the device context
@@ -402,48 +421,3 @@ void screen(int width, int height, bool32 screen, char *title)
 
 	srand(GetTickCount());
 }
-
-void setup()
-{
-	screen(960, 540, false, "win32 framework");
-	fillFlag = false;
-}
-
-void updateAndDraw(uint32 t)
-{
-	
-	/*for (int y = 0; y < screenHeight; y++)
-	{
-		for (int x = 0; x < screenWidth; x++)
-		{
-			uint8 red = (y + yOffset);
-			uint8 blue = (x + xOffset);
-			uint8 green = 0;// (y + yOffset);
-			//uint32 *pixelBuffer = (uint32 *)backBuffer.memory;
-			//pixelBuffer[y*screenWidth + x] = (red << 16) | (green << 8) | blue;
-			pixel(x, y, ((red << 16) | (green << 8) | blue));
-		}
-	}*/
-	
-	int x = rand() % screenWidth;
-	int y = rand() % screenHeight;
-
-	setColor(rand() % 255, rand() % 255, rand() % 255);
-	//uint32 *pixelBuffer = (uint32 *)backBuffer.memory;
-	//pixelBuffer[y*screenWidth + x] = (0b11111111 << 16) | (0b00000000 << 8) | 0b11111111;
-	//pixel(x, y, color);
-	//circle(x, y, rand() % 100);
-	line(rand() % screenWidth, rand() % screenHeight, rand() % screenWidth, rand() % screenHeight);
-	//RECT rect = { 0,0,100,100 };
-	//FillRect(deviceContext, &rect, (HBRUSH)CreateSolidBrush(RGB(0, 255, 0)));
-	//PatBlt(deviceContext, 0, 0, screenWidth, screenHeight-100, BLACKNESS);
-
-	//clear(Color::magenta);
-	uploadPixels();
-	
-	//_pixel(x, y, color);
-	//_line(rand() % screenWidth, rand() % screenHeight, rand() % screenWidth, rand() % screenHeight);
-	//_circle(rand() % screenWidth, rand() % screenHeight, rand() % 100);
-}
-
-void shutdown() { }

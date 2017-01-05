@@ -8,8 +8,6 @@
 	#include <SDL2/SDL_ttf.h>
 	#include <sstream>	//sprintf
 	#include <map>		//for keyPressed
-	//#define SDL2 1
-	//#include "creativeframework.cpp"
 
 	/* Globals */
 	SDL_Renderer *renderer = 0;
@@ -67,19 +65,7 @@ bool keyPressed(int32 key)
 	return false;
 }
 
-inline void uploadPixels()
-{
-	SDL_UpdateTexture(backbufferTexture, NULL, pixelBuffer, screenWidth * sizeof(uint32));
-	SDL_RenderCopy(renderer, backbufferTexture, NULL, NULL);
-	//SDL_RenderPresent(renderer);
-};
-
-inline void flip()
-{
-	SDL_RenderPresent(renderer);
-};
-
-/* SDL hardware rendering */
+/* SDL drawing functions */
 inline void clear_(ColorRGB col)
 {
 	SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, 255);
@@ -88,11 +74,15 @@ inline void clear_(ColorRGB col)
 
 inline void setColor_(int32 r, int32 g, int32 b)
 {
+	color.r = r;
+	color.g = g;
+	color.b = b;
 	SDL_SetRenderDrawColor(renderer, r, g, b, 0xff);
 }
 
 inline void setColor_(ColorRGB col)
 {
+	color = col;
 	SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, 0xff);
 }
 
@@ -101,40 +91,50 @@ inline void pixel_(int32 x, int32 y)
 	SDL_RenderDrawPoint(renderer, x, y);
 }
 
-inline void line_(int32 x0, int32 y0, int32 x1, int32 y1)
+inline void pixel_(int32 x, int32 y, uint32 col)
 {
-	SDL_RenderDrawLine(renderer, x0, y0, x1, y1);
+	uint8 r = col >> 16;
+	uint8 g = col  >> 8;
+	uint8 b = col;
+	SDL_SetRenderDrawColor(renderer, r, g, b, 0xff);
+	SDL_RenderDrawPoint(renderer, x, y);
+	//restore color to the one set with setColor
+	SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 0xff);
 }
 
-inline void circle_(int32 x0, int32 y0, int32 radius)
+inline void pixel_(int32 x, int32 y, uint8 r, uint8 g, uint8 b)
+{
+	SDL_SetRenderDrawColor(renderer, r, g, b, 0xff);
+	SDL_RenderDrawPoint(renderer, x, y);
+	//restore color to the one set with setColor
+	SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 0xff);
+}
+
+inline void pixel_(int32 x, int32 y, ColorRGB col)
+{
+	SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, 0xff);
+	SDL_RenderDrawPoint(renderer, x, y);
+	//restore color to the one set with setColor
+	SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 0xff);
+}
+
+void line_(int32 x1, int32 y1, int32 x2, int32 y2)
+{
+	SDL_RenderDrawLine(renderer, x1, y1, x2, y2);
+}
+
+inline void rect_(int32 x, int32 y, int32 width, int32 height)
+{
+	SDL_Rect rect = { x, y, width, height };
+	if (fillFlag)
+		SDL_RenderFillRect(renderer, &rect);
+	else
+		SDL_RenderDrawRect(renderer, &rect);
+}
+
+inline void circle_(int32 x, int32 y, int32 radius)
 {
 	if (fillFlag)
-	{
-		int32 x = radius;
-		int32 y = 0;
-		int32 err = 0;
-
-		while (x >= y)
-		{
-			SDL_RenderDrawPoint(renderer, x0 + x, y0 + y);
-			SDL_RenderDrawPoint(renderer, x0 + y, y0 + x);
-			SDL_RenderDrawPoint(renderer, x0 - y, y0 + x);
-			SDL_RenderDrawPoint(renderer, x0 - x, y0 + y);
-			SDL_RenderDrawPoint(renderer, x0 - x, y0 - y);
-			SDL_RenderDrawPoint(renderer, x0 - y, y0 - x);
-			SDL_RenderDrawPoint(renderer, x0 + y, y0 - x);
-			SDL_RenderDrawPoint(renderer, x0 + x, y0 - y);
-
-			y += 1;
-			err += 1 + 2 * y;
-			if (2 * (err - x) + 1 > 0)
-			{
-				x -= 1;
-				err += 1 - 2 * x;
-			}
-		}
-	}
-	else
 	{
 		int32 r2 = radius * radius;
 		int32 area = r2 << 2;
@@ -146,20 +146,48 @@ inline void circle_(int32 x0, int32 y0, int32 radius)
 			int32 ty = (i / rr) - radius;
 
 			if (tx * tx + ty * ty <= r2)
-				SDL_RenderDrawPoint(renderer, x0 + tx, y0 + ty);
+				SDL_RenderDrawPoint(renderer, x + tx, y + ty);
+		}
+	}
+	else
+	{
+		int32 x1 = radius;
+		int32 y1 = 0;
+		int32 err = 0;
+
+		while (x1 >= y1)
+		{
+			SDL_RenderDrawPoint(renderer, x + x1, y + y1);
+			SDL_RenderDrawPoint(renderer, x + y1, y + x1);
+			SDL_RenderDrawPoint(renderer, x - y1, y + x1);
+			SDL_RenderDrawPoint(renderer, x - x1, y + y1);
+			SDL_RenderDrawPoint(renderer, x - x1, y - y1);
+			SDL_RenderDrawPoint(renderer, x - y1, y - x1);
+			SDL_RenderDrawPoint(renderer, x + y1, y - x1);
+			SDL_RenderDrawPoint(renderer, x + x1, y - y1);
+
+			y1 += 1;
+			err += 1 + 2 * y1;
+			if (2 * (err - x1) + 1 > 0)
+			{
+				x1 -= 1;
+				err += 1 - 2 * x1;
+			}
 		}
 	}
 }
 
-inline void rect_(int xPos, int yPos, int width, int height)
+inline void uploadPixels()
 {
-	SDL_Rect rect = { xPos, yPos, width, height };
-	if (fillFlag)
-		SDL_RenderFillRect(renderer, &rect);
-	else
-		SDL_RenderDrawRect(renderer, &rect);
-}
+	SDL_UpdateTexture(backbufferTexture, NULL, pixelBuffer, screenWidth * sizeof(uint32));
+	SDL_RenderCopy(renderer, backbufferTexture, NULL, NULL);
+	//SDL_RenderPresent(renderer);
+};
 
+inline void flip()
+{
+	SDL_RenderPresent(renderer);
+};
 
 void print(char *message, int32 x, int32 y)
 {
@@ -373,6 +401,7 @@ int main(int argc, char** argv)
 #if defined(_DEBUG)        
 		char message[256];
 		sprintf_s(message, "%.03fms, %.03fFPS, %.03fMEGAc/f, RefreshRate: %d\0", msPerFrame, fps, megaCyclesPerFrame, refreshRate);
+		setColor_(Color::white);
 		print(message, 1, screenHeight - 20);
 		SDL_SetWindowTitle(window, message);
 		totalFrames++;
