@@ -1,7 +1,7 @@
-﻿	//#define SDL2	
-	//#define WIN_32	
+﻿/*	2D starfield
+	by Martin Fairbanks
+*/
 	#include "framework\creativeframework.cpp"
-
 	#define MAXSTARS 600
 
 	struct Star
@@ -29,7 +29,7 @@ void setup()
 	for (int i = 0; i < MAXSTARS; i++) {
 		stars[i].x = float(rand() % screenWidth);
 		stars[i].y = float(rand() % screenHeight);
-		stars[i].colorPlane = rand() % 3; //star colour between 0 and 2
+		stars[i].colorPlane = rand() % 3; //star color between 0 and 2
 	}
 }
 
@@ -47,13 +47,13 @@ void updateAndDraw(uint32 t)
 	if (direction == STARS_RIGHT)
 	{
 		//move and draw stars
-		for (int i = 0; i<MAXSTARS; i++) {
+		for (int i = 0; i < MAXSTARS; i++) {
 
 			//move star with a speed depending on plane
 			stars[i].x += (1.0f + (float)stars[i].colorPlane)*speed;
 		
 			//check if star has moved outside of screen
-			if (stars[i].x>screenWidth)
+			if (stars[i].x > screenWidth)
 			{
 				stars[i].x = 0;
 
@@ -68,7 +68,7 @@ void updateAndDraw(uint32 t)
 	}
 	else
 	{
-		for (int i = 0; i<MAXSTARS; i++) {
+		for (int i = 0; i < MAXSTARS; i++) {
 
 			stars[i].x -= (1 + (float)stars[i].colorPlane)*speed;
 

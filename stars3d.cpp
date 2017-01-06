@@ -1,8 +1,9 @@
-﻿	//#define SDL2	
-	//#define WIN_32	
+﻿/*	3D starfield
+	by Martin Fairbanks
+*/
 	#include "framework\creativeframework.cpp"
-
 	#define MAXSTARS 600
+
 	struct Star
 	{
 		real32 xpos, ypos;
@@ -12,14 +13,14 @@
 
 	static int centerX;
 	static int centerY;
-	static int prevPosX;
-	static int prevPosY;
+	static real32 prevPosX;
+	static real32 prevPosY;
 
 	void initStar(Star* star, int i)
 	{
 		//randomly init stars, put them around the center of the screen
-		star->xpos = ((rand() % screenWidth) * -1) + centerX;
-		star->ypos = ((rand() % screenHeight) * -1) + centerY;
+		star->xpos = float(((rand() % screenWidth) * -1) + centerX);
+		star->ypos = float(((rand() % screenHeight) * -1) + centerY);
 
 		//change viewpoint
 		if (mouseX > screenWidth / 2)
@@ -62,14 +63,14 @@ void updateAndDraw(uint32 t)
 		prevPosY = (stars[i].ypos / stars[i].zpos) + centerY;
 
 		//change speed depending on mouse pos
-		stars[i].speed = (float)mouseY / 20.0f;
+		stars[i].speed = mouseY / 20;
 		
 		//move star closer
 		stars[i].zpos -= stars[i].speed;
 		
 		//compute 3D position
-		int tempX = (stars[i].xpos / stars[i].zpos) + centerX;
-		int tempY = (stars[i].ypos / stars[i].zpos) + centerY;
+		real32 tempX = (stars[i].xpos / stars[i].zpos) + centerX;
+		real32 tempY = (stars[i].ypos / stars[i].zpos) + centerY;
 
 		//check if star has moved outside of screen
 		if (tempX < 0 || tempX > screenWidth - 1 || tempX < 0 || tempY > screenHeight - 1 || stars[i].zpos <= 0)
@@ -81,13 +82,13 @@ void updateAndDraw(uint32 t)
 		if (mouseX > screenWidth / 2)
 		{
 			if (tempX == prevPosX || tempY ==prevPosY)
-				pixel(tempX, tempY, 255, 255, 255);
+				pixel((int)tempX, (int)tempY, 255, 255, 255);
 			else
-				line(tempX, tempY, prevPosX, prevPosY);
+				line((int)tempX, (int)tempY, (int)prevPosX, (int)prevPosY);
 		}
 		else
 		{
-			pixel(tempX, tempY, 0, stars[i].color, stars[i].color);
+			pixel((int)tempX, (int)tempY, 0, stars[i].color, stars[i].color);
 		}
 	}
 
