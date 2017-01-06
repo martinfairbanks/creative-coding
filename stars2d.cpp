@@ -7,8 +7,8 @@
 	struct Star
 	{											
 		real32 x, y;							
-		uint8 plane;							
-	} *stars;
+		uint8 colorPlane;							
+	} stars[MAXSTARS];
 
 	enum Direction
 	{
@@ -18,20 +18,18 @@
 
 	Direction direction = STARS_RIGHT;
 	unsigned int starColors[3] = { 0x30, 0x80, 0xff };
-	float speed = 0.6f;
+	real32 speed = 0.6f;
 
 void setup()
 {
 	//vSync = false;
 	screen(960, 540, false, "stars2d");
-	//allocate memory
-	stars = new Star[MAXSTARS];
 
 	//randomly generate some stars
 	for (int i = 0; i < MAXSTARS; i++) {
 		stars[i].x = float(rand() % screenWidth);
 		stars[i].y = float(rand() % screenHeight);
-		stars[i].plane = rand() % 3; //star colour between 0 and 2
+		stars[i].colorPlane = rand() % 3; //star colour between 0 and 2
 	}
 }
 
@@ -48,11 +46,11 @@ void updateAndDraw(uint32 t)
 
 	if (direction == STARS_RIGHT)
 	{
-		//loop through stars and paint them one by one
+		//move and draw stars
 		for (int i = 0; i<MAXSTARS; i++) {
 
 			//move star with a speed depending on plane
-			stars[i].x += (1.0f + (float)stars[i].plane)*speed;
+			stars[i].x += (1.0f + (float)stars[i].colorPlane)*speed;
 		
 			//check if star has moved outside of screen
 			if (stars[i].x>screenWidth)
@@ -62,10 +60,9 @@ void updateAndDraw(uint32 t)
 				//new random y pos
 				stars[i].x = float((rand() % 100) * -1.0f);	//to prevent stars from lining up after fast speed
 				stars[i].y = float(rand() % screenHeight);
-				//LOG(stars[i].x);
 			}
 			//set color and paint star
-			setColor(0, starColors[stars[i].plane], 0);
+			setColor(0, starColors[stars[i].colorPlane], 0);
 			pixel((int)stars[i].x, (int)stars[i].y);
 		}
 	}
@@ -73,14 +70,14 @@ void updateAndDraw(uint32 t)
 	{
 		for (int i = 0; i<MAXSTARS; i++) {
 
-			stars[i].x -= (1 + (float)stars[i].plane)*speed;
+			stars[i].x -= (1 + (float)stars[i].colorPlane)*speed;
 
 			if (stars[i].x <= 0)
 			{
 				stars[i].x = float((rand() % 100) + screenWidth);
 				stars[i].y = float(rand() % screenHeight);
 			}
-			setColor(0, 0, starColors[stars[i].plane]);
+			setColor(0, 0, starColors[stars[i].colorPlane]);
 			pixel((int)stars[i].x, (int)stars[i].y);
 			pixel((int)stars[i].x + 1, (int)stars[i].y);
 		}
@@ -89,7 +86,4 @@ void updateAndDraw(uint32 t)
 	uploadPixels();
 }
 
-void shutdown() 
-{
-	delete stars;
-}
+void shutdown() { }
