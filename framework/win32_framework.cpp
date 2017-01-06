@@ -1,6 +1,6 @@
-	/* TODO:	rect_
-				setColor_
-				clear_
+	/* TODO:	setColor_
+				fix fullscreen mode
+				fix window paint, window turns black in some cases when you move it
 	*/
 
 	/* Linking */
@@ -357,6 +357,7 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
 		lastCycleCount = endCycleCount;
 	}
 
+	shutdown();
 	//release the device context
 	ReleaseDC(hWnd, deviceContext);
 	//release memory 
@@ -371,24 +372,23 @@ void screen(int width, int height, bool32 screen, char *title)
 	//retrieves the frequency of the performance counter in counts per seonds
 	QueryPerformanceFrequency(&perfCountFrequencyResult);
 	performanceFrequency = perfCountFrequencyResult.QuadPart;
+	screenWidth = width;
+	screenHeight = height;
 
 	//run in windowed mode in debug, but maximized in release.
 	#if defined(_DEBUG)    
-		screenWidth = width;
-		screenHeight = height;
 		#define WINDOWFLAGS (WS_VISIBLE | WS_OVERLAPPED | WS_MINIMIZEBOX | WS_SYSMENU)
 	#else
-		screenWidth = GetSystemMetrics(SM_CXSCREEN);	// hämtar systemets upplösning för max fönster
+		//TODO: I don't think we can switch to a new resolution using win32. Fix this in another way?
+		screenWidth = GetSystemMetrics(SM_CXSCREEN);
 		screenHeight = GetSystemMetrics(SM_CYSCREEN);
 		ShowCursor(FALSE);
 		#define WINDOWFLAGS (WS_VISIBLE | WS_POPUP | WS_MAXIMIZE)
 	#endif
 
-	//create and initialize the windows class
+	//create, initialize and register the window class
 	WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WindowProc, 0, 0,
 		instance, NULL, LoadCursor(NULL, IDC_ARROW), (HBRUSH)GetStockObject(BLACK_BRUSH), NULL, "win32-framework", NULL };
-
-	//register the window class
 	RegisterClassExA(&wc);
 
 	//create window
@@ -401,7 +401,7 @@ void screen(int width, int height, bool32 screen, char *title)
 
 	int bytePerPixel = 4;
 
-	//create the backbuffe
+	//create the backbuffer
 	backBuffer.info.bmiHeader.biSize = sizeof(backBuffer.info.bmiHeader);
 	backBuffer.info.bmiHeader.biWidth = screenWidth;
 	backBuffer.info.bmiHeader.biHeight = -screenHeight;	//if biHeight is positive the bitmap is a bottom-up DIB and it's origin is the lower-left corner,

@@ -30,9 +30,9 @@ void updateAndDraw(uint32 t)
 	//setColor_(Color::green);
 	fill();
 	//rect_(100, 100, 50, 50);
-	setColor_(Color::orange);
+//	setColor_(Color::orange);
 	circle_(200, 200, 10);
-	setColor_(Color::orange);
+	//setColor_(Color::orange);
 	pixel_(400, 100, 0x0000ff);
 	pixel_(401, 100, 0x0000ff);
 	pixel_(400, 101, 0x0000ff);

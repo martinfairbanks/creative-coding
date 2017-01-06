@@ -1,4 +1,8 @@
-﻿	/* Linking */
+﻿	/* TODO:	fix fullscreen switch, the screen coordinates gets messed up if you hit return to get to fullscreen
+
+	*/
+
+	/* Linking */
 	#pragma comment(lib, "SDL2.lib")
 	#pragma comment(lib, "SDL2main.lib")
 	#pragma comment(lib, "SDL2_ttf.lib")
@@ -38,6 +42,7 @@
 
 	void setup();
 	void updateAndDraw(uint32 t);
+	void shutdown();
 
 bool keyDown(int32 key)
 {
@@ -216,7 +221,11 @@ void screen(int32 width, int32 height, bool32 screen, char *title)
 	int32 tempHeight = screenHeight = height;
 
 	uint32 flags = SDL_WINDOW_SHOWN;//SDL_WINDOW_RESIZABLE
-
+#if (_DEBUG)
+	fullscreen = false;
+#else
+	fullscreen = true;
+#endif
 	//set to zero to scale the window to desired resolution without changing the desktop resolution
 	if (fullscreen)
 	{
@@ -266,6 +275,7 @@ void screen(int32 width, int32 height, bool32 screen, char *title)
 
 void quit()
 {
+	shutdown();
 	free(pixelBuffer);
 	SDL_GameControllerClose(controllerHandle);
 	TTF_CloseFont(font);
@@ -319,6 +329,12 @@ int main(int argc, char** argv)
 		{
 			switch (event.type)
 			{
+				case SDL_MOUSEMOTION:
+				{
+					//NOTE: this works in windowed and fullscreen mode
+					mouseX = event.button.x;
+					mouseY = event.button.y;
+				}
 				case SDL_KEYDOWN:
 				{
 					switch (event.key.keysym.sym)
@@ -374,7 +390,7 @@ int main(int argc, char** argv)
 		}
 
 		keystates = SDL_GetKeyboardState(NULL);
-		SDL_GetMouseState(&mouseX, &mouseY);
+		//SDL_GetGlobalMouseState(&mouseX, &mouseY); //this dosen't work in fullscren with SDL_RenderSetLogicalSize
 
 		for (int i = 0; i <= 2; i++)
 		{
@@ -402,8 +418,13 @@ int main(int argc, char** argv)
 		char message[256];
 		sprintf_s(message, "%.03fms, %.03fFPS, %.03fMEGAc/f, RefreshRate: %d\0", msPerFrame, fps, megaCyclesPerFrame, refreshRate);
 		setColor_(Color::white);
-		print(message, 1, screenHeight - 20);
-		SDL_SetWindowTitle(window, message);
+		//NOTE: temporary solution to the switch to fullscreen problem
+		if (fullscreen)
+			print(message, 1, screenHeight+200);
+		else
+			print(message, 1, screenHeight-20);
+
+		//SDL_SetWindowTitle(window, message);
 		totalFrames++;
 #endif
 		//update screen
