@@ -22,7 +22,7 @@ void setup()
 {
 	screen(960, 540, false, "creative coding");
 	myTexture.loadTexture("data/invader.jpeg");
-	mySprite.load("data/animate-alpha.png", 128, 82);
+	mySprite.load("data/animation.png", 128, 82);
 }
 
 void updateAndDraw(uint32 t)
