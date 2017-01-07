@@ -1,15 +1,17 @@
 ﻿	/* TODO:	fix fullscreen switch, the screen coordinates gets messed up if you hit return to get to fullscreen
-
+				Random int,float
 	*/
 
 	/* Linking */
 	#pragma comment(lib, "SDL2.lib")
 	#pragma comment(lib, "SDL2main.lib")
 	#pragma comment(lib, "SDL2_ttf.lib")
+	#pragma comment(lib, "SDL2_image.lib")
 
 	/* Includes */
 	#include <SDL2/SDL.h>
 	#include <SDL2/SDL_ttf.h>
+	#include <SDL2/SDL_image.h>
 	#include <sstream>	//sprintf
 	#include <map>		//for keyPressed
 
@@ -39,6 +41,26 @@
 	int32 joyRightStickX;
 	int32 joyRightStickY;
 	const int32 joyDeadZone = 8000;
+
+	uint8 sprite0[16 * 16] =
+	{
+		0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0,
+		0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0,
+		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+		0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0,
+		0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0
+	};
 
 	void setup();
 	void updateAndDraw(uint32 t);
@@ -181,6 +203,156 @@ inline void circle_(int32 x, int32 y, int32 radius)
 		}
 	}
 }
+
+inline void softSprite(uint8 *spriteData, int32 x, int32 y, int32 width, int32 height, ColorRGB col = color)
+{
+	if ((x<0) || (x>screenWidth - 16) || (y<0) || (y>screenHeight - 16)) return;
+	int32 c = col.r << 16 | col.g << 8 | col.b | 0xff000000;
+	//uint8 *sprite = spriteMap[id];
+
+	int32 index=0;
+	int32 yOffset = y * screenWidth + x;
+	for (int32 i = 0; i < height; i++)
+	{
+		for (int32 j = 0; j < width; j++)
+		{
+			if (spriteData[index++])
+			{
+				((uint32*)pixelBuffer)[yOffset + j] = c;
+			}
+		}
+		yOffset += screenWidth;
+	}
+}
+
+struct Sprite
+{
+	int32 xPos = 0;
+	int32 yPos = 0;
+	int32 width = 0;				//image dimensions
+	int32 height = 0;
+	int32 frameWidth = 0;			//frame dimensions in spritesheet
+	int32 frameHeight = 0;
+	SDL_Texture *texture = 0;		//pointer to the texture image
+	
+	bool Sprite::loadTexture(char filename[])
+	{
+		texture = IMG_LoadTexture(renderer, filename);
+
+		if (texture == NULL)
+		{
+			LOG(IMG_GetError());
+			return false;
+		}
+		else
+		{
+			//query texture to get it's width and height
+			SDL_QueryTexture(texture, NULL, NULL, &width, &height);
+		}
+
+		return true;
+	}
+
+	bool Sprite::load(char fileName[], int32 w, int32 h)
+	{
+		if (loadTexture(fileName))
+		{
+			frameWidth = w;
+			frameHeight = h;
+			return true;
+		}
+		return false;
+	}
+	void Sprite::setColor(Uint8 red, Uint8 green, Uint8 blue)
+	{
+		//modulate texture rgb
+		int32 test = SDL_SetTextureColorMod(texture, red, green, blue);
+	}
+
+	void Sprite::setBlendMode(SDL_BlendMode blending)
+	{
+		//set blending function
+		SDL_SetTextureBlendMode(texture, blending);
+	}
+
+	void Sprite::setAlpha(Uint8 alpha)
+	{
+		//modulate texture alpha
+		SDL_SetTextureAlphaMod(texture, alpha);
+	}
+
+	//draw texture at position x, y, with width and height
+	void Sprite::draw(int32 x, int32 y, int32 w, int32 h)
+	{
+		//set draw area
+		SDL_Rect dstRect = { x, y, w, h };
+
+		SDL_RenderCopy(renderer, texture, NULL, &dstRect);
+	}
+
+	//draw texture at position x, y preserving width and height
+	void Sprite::draw(int32 x, int32 y)
+	{
+		draw(x, y, width, height);
+	}
+
+	//draw a frame from spritesheet at position x, y
+	void Sprite::draw(int32 x, int32 y, int32 frame)
+	{
+		SDL_Rect dstRect = { x, y, frameWidth, frameHeight };
+		int32 columns = width / frameWidth;
+
+		SDL_Rect srcRect = { (frame%columns)*frameWidth, (frame / columns)*frameHeight,
+							 frameWidth, frameHeight };
+
+		SDL_RenderCopy(renderer, texture, &srcRect, &dstRect);
+	}
+
+	/*	draw texture at position x, y, with width and height
+		angle -> an angle in degrees that indicates the rotation that will be applied to the destination
+		flip -> flip value stating which flipping actions should be performed on the texture
+				SDL_FLIP_NONE, SDL_FLIP_HORIZONTAL, SDL_FLIP_VERTICAL
+	*/
+	void Sprite::draw(int32 x, int32 y, int32 w, int32 h, real64 angle, SDL_RendererFlip flip)
+	{
+		//set draw area
+		SDL_Rect dstRect = { x ,y , w, h };
+
+		SDL_RenderCopyEx(renderer, texture, NULL, &dstRect, angle, NULL, flip);
+	}
+
+	/*	frame ->	source rect in spritesheet or NULL for the entire texture
+		center ->	a point indicating the point around which dstRect will be rotated 
+					if NULL, rotation will be done aroud dstrect.w / 2, dstrect.h / 2
+	
+	*/
+	void Sprite::drawEx(int32 x, int32 y, SDL_Rect* frame = NULL, real64 angle = 0.0f, SDL_Point* center = NULL, SDL_RendererFlip flip = SDL_FLIP_NONE)
+	{
+		//set draw area
+		SDL_Rect dstRect = { x, y, width, height };
+
+		//set frame draw area
+		if (frame != NULL)
+		{
+			dstRect.w = frame->w;
+			dstRect.h = frame->h;
+		}
+
+		//copy image to renderer
+		SDL_RenderCopyEx(renderer, texture, frame, &dstRect, angle, center, flip);
+	}
+
+	void Sprite::clean()
+	{
+		//free texture
+		if (texture != NULL)
+		{
+			SDL_DestroyTexture(texture);
+			texture = NULL;
+		}
+	}
+};
+
 
 inline void uploadPixels()
 {

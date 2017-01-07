@@ -57,6 +57,20 @@ namespace Color
 {
 	ColorRGB black{ 0,0,0 };
 	ColorRGB white{ 255,255,255 };
+	ColorRGB c64red{ 104, 55, 43 };
+	ColorRGB c64cyan{ 112, 164, 178 };
+	ColorRGB c64purple{ 111, 61, 134 };
+	ColorRGB c64green{ 88, 141, 67 };
+	ColorRGB c64blue{ 53, 40, 121 };
+	ColorRGB c64yellow{ 184, 199, 111 };
+	ColorRGB c64orange{ 111, 79, 37 };
+	ColorRGB c64brown{ 67, 57, 0 };
+	ColorRGB c64lightred{ 154, 103, 89 };
+	ColorRGB c64darkgrey{ 68, 68, 68 };
+	ColorRGB c64grey{ 108, 108, 108 };
+	ColorRGB c64lightgreen{ 154, 210, 132 };
+	ColorRGB c64lightblue{ 108, 94, 181 };
+	ColorRGB c64lightgrey{ 149, 149, 149 };
 	ColorRGB red{ 255,0,0 };
 	ColorRGB green{ 0,255,0 };
 	ColorRGB blue{ 0,0,255 };
@@ -64,8 +78,6 @@ namespace Color
 	ColorRGB cyan{ 0,255,255 };
 	ColorRGB magenta{ 255,0,255 };
 	ColorRGB purple{ 128, 0, 128 };
-	ColorRGB orange{ 255,127,50 };
-	ColorRGB cornflowerblue{ 101, 156, 239 };
 	ColorRGB gray{ 128, 128, 128 };
 	ColorRGB grey{ 192, 192, 192 };
 	ColorRGB maroon{ 128, 0, 0 };
@@ -73,6 +85,13 @@ namespace Color
 	ColorRGB navy{ 0, 0, 128 };
 	ColorRGB teal{ 0, 128, 128 };
 	ColorRGB olive{ 128, 128, 0 };
+	ColorRGB orange{ 255,127,50 };
+	ColorRGB cornflowerblue{ 101, 156, 239 };
+	ColorRGB azure{ 0, 127, 255 };
+	ColorRGB turquoise{ 48, 213, 200 };
+	ColorRGB gold{ 255, 215, 0 };
+	ColorRGB silver{ 192, 192, 192 };
+	ColorRGB pink{ 255, 192, 203 };
 }
 
 int32 mouseX = 0;
@@ -81,9 +100,9 @@ uint32 mouseButton[3] = {};
 
 enum MouseButtons
 {
-	LEFT = 0,
-	MIDDLE = 1,
-	RIGHT = 2
+	LEFT,
+	MIDDLE,
+	RIGHT
 };
 
 void setup();
@@ -110,8 +129,6 @@ inline void noFill()
 {
 	fillFlag = false;
 }
-
-//#include "sdl2_framework.cpp"
 
 #if SDL2
 	#include "sdl2_framework.cpp"
