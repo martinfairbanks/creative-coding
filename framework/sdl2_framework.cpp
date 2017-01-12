@@ -20,6 +20,7 @@
 	SDL_Window *window = 0;
 	TTF_Font* font = 0;
 	SDL_Texture *backbufferTexture;	//texture used for drawing using the pixelbuffer
+	SDL_Texture *particleTexture;
 
 	const Uint8 *keystates = 0;
 	std::map<int, bool> keyArray;
@@ -225,6 +226,20 @@ inline void softSprite(uint8 *spriteData, int32 x, int32 y, int32 width, int32 h
 	}
 }
 
+
+/* -----Textures----- */
+SDL_Texture* loadTexture(char filename[])
+{
+	SDL_Texture* tex = IMG_LoadTexture(renderer, filename);
+
+	if (tex == NULL)
+	{
+		LOG(IMG_GetError());
+		return false;
+	}
+	return tex;
+}
+
 struct Sprite
 {
 	int32 xPos = 0;
@@ -354,6 +369,102 @@ struct Sprite
 };
 
 
+/* -----Particles------ */
+struct Particle
+{
+	real32 x;
+	real32 y;
+	real32 xVel;
+	real32 yVel;
+	real32 xAccel;
+	real32 yAccel;
+	int32 life;
+	ColorRGB color;
+	int32 scale;
+};
+
+struct Particles
+{
+	void setupParticles(int32 numParticles);
+	void createParticle(Particle* p);
+	void blendMode(int32 blendmode);
+	void updateAndDraw();
+
+	Particle *particleList;
+	int32 numParticles;
+} particles;
+
+void Particles::createParticle(Particle* p)
+{
+	p->xVel = (real32)(rand() % 3) - 1.0f;
+	p->yVel = (real32)(rand() % 3) - 1.0f;
+	p->xAccel = (real32)(rand() % 3) - 1.0f;
+	p->yAccel = (real32)(rand() % 3) - 1.0f;
+	p->life = rand() % 255;
+	p->color.r = rand() % 255;
+	p->color.g = rand() % 255;
+	p->color.b = rand() % 255;
+	p->scale = rand() % 20;
+	p->x = (real32)(rand() % screenWidth);
+	p->y = (real32)(rand() % screenHeight);
+}
+
+void Particles::setupParticles(int32 num)
+{
+	numParticles = num;
+	particleList = (Particle *)malloc(numParticles * sizeof(Particle));
+	for (int32 i = 0; i < numParticles; i++)
+	{
+		createParticle(&particleList[i]);
+	}
+}
+
+void Particles::updateAndDraw()
+{
+	for (int32 i = 0; i < numParticles; i++)
+	{
+		particleList[i].x += particleList[i].xVel;
+		particleList[i].y += particleList[i].yVel;
+		particleList[i].xVel += particleList[i].xAccel;
+		particleList[i].yVel += particleList[i].yAccel;
+		particleList[i].life--;
+
+		if (particleList[i].life < 0)
+		{
+			createParticle(&particleList[i]);
+		}
+	}
+
+	for (int32 i = 0; i < numParticles; i++)
+	{
+		SDL_SetTextureColorMod(particleTexture, particleList[i].color.r, particleList[i].color.g, particleList[i].color.b);
+		SDL_SetTextureAlphaMod(particleTexture, particleList[i].life);
+		SDL_Rect ParticleDestRect = { (int32)particleList[i].x, (int32)particleList[i].y, particleList[i].scale, particleList[i].scale };
+		SDL_RenderCopy(renderer, particleTexture, NULL, &ParticleDestRect);
+	}
+}
+
+void Particles::blendMode(int32 blendmode)
+{
+	if (blendmode == 0)
+	{
+		SDL_SetTextureBlendMode(particleTexture, SDL_BLENDMODE_NONE);
+	}
+	else if (blendmode == 1)
+	{
+		SDL_SetTextureBlendMode(particleTexture, SDL_BLENDMODE_BLEND);
+	}
+	else if (blendmode == 2)
+	{
+		SDL_SetTextureBlendMode(particleTexture, SDL_BLENDMODE_ADD);
+	}
+	else
+	{
+		SDL_SetTextureBlendMode(particleTexture, SDL_BLENDMODE_MOD);
+	}
+}
+
+
 inline void uploadPixels()
 {
 	SDL_UpdateTexture(backbufferTexture, NULL, pixelBuffer, screenWidth * sizeof(uint32));
@@ -381,14 +492,13 @@ void print(char *message, int32 x, int32 y)
 	SDL_DestroyTexture(texture);
 }
 
-void screen(int32 width, int32 height, bool32 screen, char *title)
+void screen(int32 width, int32 height, bool32 fscreen, char *title)
 {
 	performanceFrequency = SDL_GetPerformanceFrequency();
 	srand(SDL_GetTicks());
 
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER);
 
-	fullscreen = screen;
 	int32 tempWidth = screenWidth = width;
 	int32 tempHeight = screenHeight = height;
 
@@ -398,6 +508,8 @@ void screen(int32 width, int32 height, bool32 screen, char *title)
 #else
 	fullscreen = true;
 #endif
+	fullscreen = fscreen;
+
 	//set to zero to scale the window to desired resolution without changing the desktop resolution
 	if (fullscreen)
 	{
@@ -453,6 +565,7 @@ void quit()
 	TTF_CloseFont(font);
 	TTF_Quit();
 	SDL_DestroyTexture(backbufferTexture);
+	SDL_DestroyTexture(particleTexture);
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
@@ -489,7 +602,7 @@ int main(int argc, char** argv)
 
 	const real64 MAX_FRAME_TIME = 1000 / 60;
 	int32 refreshRate = getWindowRefreshRate();
-	uint32 frameStart = SDL_GetTicks(); //LAST_UPDATE_TIME
+	uint32 frameStart = SDL_GetTicks();
 	uint32 totalFrames = 0;
 	uint64 lastCounter = SDL_GetPerformanceCounter();
 	uint64 lastCycleCount = __rdtsc();
@@ -564,18 +677,18 @@ int main(int argc, char** argv)
 		keystates = SDL_GetKeyboardState(NULL);
 		//SDL_GetGlobalMouseState(&mouseX, &mouseY); //this dosen't work in fullscren with SDL_RenderSetLogicalSize
 
-		for (int i = 0; i <= 2; i++)
+		for (int32 i = 0; i <= 2; i++)
 		{
 			mouseButton[i] = SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(i);
 		}
 		
 		/* the time it takes to draw one frame */
-		uint32 frameTime = SDL_GetTicks() - frameStart;
+		/*uint32 frameTime = SDL_GetTicks() - frameStart;
 		if (frameTime > MAX_FRAME_TIME)
-			frameTime = (uint32)MAX_FRAME_TIME;
+			frameTime = (uint32)MAX_FRAME_TIME;*/
 		frameStart = SDL_GetTicks();
 
-		updateAndDraw(frameTime);
+		updateAndDraw(frameStart);
 
 		uint64 endCycleCount = __rdtsc();
 		uint64 endCounter = SDL_GetPerformanceCounter();
@@ -606,14 +719,6 @@ int main(int argc, char** argv)
 		lastCycleCount = endCycleCount;
 		lastCounter = endCounter;
 	}
-#if defined(_DEBUG)   
-	printf("Running time: %d seconds\n", SDL_GetTicks() / 1000);
-	printf("Frames crunched: %d\n", totalFrames);
-	//TODO: fix type conversions to get a more accurate result
-	uint32 fps = (totalFrames / uint32((SDL_GetTicks() / 1000.f)));
-	printf("Average FPS: %u\n", fps);
-	//system("PAUSE");
-#endif
 	quit();
 	return 0;
 }

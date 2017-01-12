@@ -94,6 +94,7 @@ namespace Color
 	ColorRGB pink{ 255, 192, 203 };
 }
 
+/* ----- Input ----- */
 int32 mouseX = 0;
 int32 mouseY = 0;
 uint32 mouseButton[3] = {};
@@ -104,6 +105,22 @@ enum MouseButtons
 	MIDDLE,
 	RIGHT
 };
+
+
+/* ----- Math ----- */
+struct Vector2d
+{
+	real32 x;
+	real32 y;
+};
+
+struct Vector3d
+{
+	real32 x;
+	real32 y;
+	real32 z;
+};
+
 
 void setup();
 void updateAndDraw(uint32 t);
@@ -138,6 +155,9 @@ inline void noFill()
 	#include "win32_framework.cpp"
 #endif
 
+#if OPENGL4
+	#include "opengl4_framework.cpp"
+#endif
 
 #if defined(SDL2) | defined(WINDOWS)
 /* clear the pixelbuffer with specific color */

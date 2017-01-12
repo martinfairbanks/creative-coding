@@ -33,7 +33,7 @@ void updateAndDraw(uint32 t)
 	setColor(Color::c64orange);
 	softSprite(sprite0, 100, 100, 16, 16);
 	setColor(Color::turquoise);
-	softSprite(enemy, 200, 200, 11, 8);
+	softSprite(enemy, mouseX, mouseY, 11, 8);
 	uploadPixels();
 
 	/* set alpha and blending
