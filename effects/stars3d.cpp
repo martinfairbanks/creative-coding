@@ -1,20 +1,21 @@
 ﻿/*	3D starfield
 	by Martin Fairbanks
 */
+	#define SDL2
 	#include "framework\creativeframework.cpp"
 	#define MAXSTARS 600
 
 	struct Star
 	{
-		real32 xpos, ypos;
-		int zpos, speed;
+		float32 xpos, ypos;
+		int32 zpos, speed;
 		uint8 color;
 	} stars[MAXSTARS];
 
 	static int centerX;
 	static int centerY;
-	static real32 prevPosX;
-	static real32 prevPosY;
+	static float32 prevPosX;
+	static float32 prevPosY;
 
 	void initStar(Star* star, int i)
 	{
@@ -42,7 +43,7 @@
 void setup()
 {
 	//vSync = false;
-	screen(960, 540, false, "stars3d");
+	screen(960, 540, true, "stars3d");
 	centerX = screenWidth / 2;
 	centerY = screenHeight / 2;
 	
@@ -54,7 +55,7 @@ void setup()
 
 void updateAndDraw(uint32 t)
 {
-	clear(Color::black);
+	clear(black);
 
 	//move and draw stars
 	for (int i = 0; i < MAXSTARS; i++)
@@ -69,8 +70,8 @@ void updateAndDraw(uint32 t)
 		stars[i].zpos -= stars[i].speed;
 		
 		//compute 3D position
-		real32 tempX = (stars[i].xpos / stars[i].zpos) + centerX;
-		real32 tempY = (stars[i].ypos / stars[i].zpos) + centerY;
+		float32 tempX = (stars[i].xpos / stars[i].zpos) + centerX;
+		float32 tempY = (stars[i].ypos / stars[i].zpos) + centerY;
 
 		//check if star has moved outside of screen
 		if (tempX < 0 || tempX > screenWidth - 1 || tempX < 0 || tempY > screenHeight - 1 || stars[i].zpos <= 0)

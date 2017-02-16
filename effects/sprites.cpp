@@ -1,10 +1,10 @@
-﻿	//#define SDL2	
+﻿	#define SDL2	
 	//#define WIN_32	
 	#include "framework\creativeframework.cpp"
 
 	Sprite myTexture;
 	Sprite mySprite;
-	real32 xAngle = 0;
+	float32 xAngle = 0;
 
 	uint8 enemy[11 * 8] =
 	{
@@ -29,10 +29,10 @@ void updateAndDraw(uint32 t)
 {
 	xAngle += 0.1;
 
-	clear(Color::navy);
-	setColor(Color::c64orange);
+	clear(navy);
+	setColor(c64orange);
 	softSprite(sprite0, 100, 100, 16, 16);
-	setColor(Color::turquoise);
+	setColor(turquoise);
 	softSprite(enemy, mouseX, mouseY, 11, 8);
 	uploadPixels();
 

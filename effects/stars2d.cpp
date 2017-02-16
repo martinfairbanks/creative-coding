@@ -1,12 +1,13 @@
 ﻿/*	2D starfield
 	by Martin Fairbanks
 */
+	#define SDL2
 	#include "framework\creativeframework.cpp"
 	#define MAXSTARS 600
 
 	struct Star
 	{											
-		real32 x, y;							
+		float32 x, y;							
 		uint8 colorPlane;							
 	} stars[MAXSTARS];
 
@@ -18,12 +19,12 @@
 
 	Direction direction = STARS_RIGHT;
 	unsigned int starColors[3] = { 0x30, 0x80, 0xff };
-	real32 speed = 0.6f;
+	float32 speed = 0.6f;
 
 void setup()
 {
 	//vSync = false;
-	screen(960, 540, false, "stars2d");
+	screen(960, 540, true, "stars2d");
 
 	//randomly generate some stars
 	for (int i = 0; i < MAXSTARS; i++) {
@@ -40,7 +41,7 @@ void updateAndDraw(uint32 t)
 	else
 		direction = STARS_LEFT;
 
-	clear(Color::black);
+	clear(black);
 	
 	speed = (float)mouseY / 80.0f;
 

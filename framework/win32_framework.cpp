@@ -12,7 +12,7 @@
 	#define WIN32_LEAN_AND_MEAN				//#define WIN32_LEANER_AND_MEANER //#define VC_EXTRALEAN
 	#include <Windows.h>
 	#include <Xinput.h>
-	#define WINDOWS
+	//#define WINDOWS
 	//#include "creativeframework.h"
 	
 	/* Globals */

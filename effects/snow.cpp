@@ -1,6 +1,7 @@
 ﻿/*	Snowflakes
 	by Martin Fairbanks
 */
+	#define SDL2
 	#include "framework\creativeframework.cpp"
 	#define MAX_FLAKES	2000		
 	#define MAX_LAYERS	5
@@ -26,7 +27,7 @@ void setup()
 
 void updateAndDraw(uint32 t)
 {
-	clear(0x0044aa);
+	clear(40,20,220);
 
 	for (int i = 0; i < MAX_FLAKES; i++)
 	{
