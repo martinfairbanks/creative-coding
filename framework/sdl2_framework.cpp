@@ -760,6 +760,10 @@ int main(int argc, char** argv)
 				mouseIsPressed = true;
 			}
 		}
+		if (mouseIsPressed && (mouseX != prevMouseX || mouseX != prevMouseX))
+			mouseDragged = true;
+		else
+			mouseDragged = false;
 
 		/*mouseIsPressed = false;
 		for (int32 i = 1; i <= 3; i++)
@@ -776,6 +780,10 @@ int main(int argc, char** argv)
 		globalTime = SDL_GetTicks();
 
 		updateAndDraw(timeDelta);
+
+		//save the mouse coordinates for the previous frame, this is used for mousedrag
+		prevMouseX = mouseX;
+		prevMouseY = mouseX;
 
 		uint64 endCycleCount = __rdtsc();
 		uint64 endCounter = SDL_GetPerformanceCounter();

@@ -56,11 +56,14 @@ void shutdown();
 /* ----- Input ----- */
 int32 mouseX = 0;
 int32 mouseY = 0;
+int32 prevMouseX = 0;				//mouse coords for previous frame
+int32 prevMouseY = 0;
+
 uint32 mouseButton[4] = {};
 
-bool32 mouseIsPressed = false;	//true if mouse is pressed
-//bool32 mouseClick = false;
+bool32 mouseIsPressed = false;
 bool32 mouseReleased = false;
+bool32 mouseDragged = false;
 
 enum MouseButtons
 {
