@@ -47,7 +47,7 @@ bool32 vSync = true;
 uint64 performanceFrequency;		//the frequency of the performance counter in counts per seonds
 uint32 *pixelBuffer;				//pixelbuffer for pixel manipulation
 bool32 fillFlag = true;				//fill flag for shapes
-int32 lineWidth = 1;
+int32 lineWidth = 1;				//strokeweight
 
 void setup();
 void updateAndDraw(uint32 t);
@@ -457,9 +457,9 @@ Color colorHSL(Color colorHSL)
 {
 	float32 r, g, b, h, s, l;
 	float32 temp1, temp2, tempr, tempg, tempb;
-	h = colorHSL.r / 256.0;
-	s = colorHSL.g / 256.0;
-	l = colorHSL.b / 256.0;
+	h = (float32)colorHSL.r / 256.0f;
+	s = (float32)colorHSL.g / 256.0f;
+	l = (float32)colorHSL.b / 256.0f;
 
 	if (s == 0) r = g = b = l;
 	else
@@ -498,7 +498,7 @@ Color colorHSL(Color colorHSL)
 	col.b = int32(b * 255.0);
 	return col;
 }
-
+/*
 void setColor(int32 r, int32 g, int32 b)
 {
 	if (colorModeFlag == RGB)
@@ -548,6 +548,111 @@ void setColor(uint8 col)
 	else if (colorModeFlag == HSL)
 	{
 		color = colorHSL(Color{ col, col, col });
+	}
+}
+*/
+void fill(int32 r, int32 g, int32 b)
+{
+	if (colorModeFlag == RGB)
+	{
+		fillColor.r = r;
+		fillColor.g = g;
+		fillColor.b = b;
+	}
+	else if (colorModeFlag == HSB)
+	{
+		fillColor = colorHSB(Color{ r, g, b });
+	}
+	else if (colorModeFlag == HSL)
+	{
+		fillColor = colorHSL(Color{ r, g, b });
+	}
+}
+
+void fill(Color col)
+{
+	if (colorModeFlag == RGB)
+	{
+		fillColor = col;
+	}
+	else if (colorModeFlag == HSB)
+	{
+		fillColor = colorHSB(Color{ col.r, col.g, col.b });
+	}
+	else if (colorModeFlag == HSL)
+	{
+		fillColor = colorHSL(Color{ col.r, col.g, col.b });
+	}
+}
+
+void fill(uint8 col)
+{
+	if (colorModeFlag == RGB)
+	{
+		fillColor.r = col;
+		fillColor.g = col;
+		fillColor.b = col;
+	}
+	else if (colorModeFlag == HSB)
+	{
+		fillColor = colorHSB(Color{ col, col, col });
+	}
+	else if (colorModeFlag == HSL)
+	{
+		fillColor = colorHSL(Color{ col, col, col });
+	}
+}
+
+
+void stroke(int32 r, int32 g, int32 b)
+{
+	if (colorModeFlag == RGB)
+	{
+		strokeColor.r = r;
+		strokeColor.g = g;
+		strokeColor.b = b;
+	}
+	else if (colorModeFlag == HSB)
+	{
+		strokeColor = colorHSB(Color{ r, g, b });
+	}
+	else if (colorModeFlag == HSL)
+	{
+		strokeColor = colorHSL(Color{ r, g, b });
+	}
+}
+
+void stroke(Color col)
+{
+	if (colorModeFlag == RGB)
+	{
+		strokeColor = col;
+	}
+	else if (colorModeFlag == HSB)
+	{
+		strokeColor = colorHSB(Color{ col.r, col.g, col.b });
+	}
+	else if (colorModeFlag == HSL)
+	{
+		strokeColor = colorHSL(Color{ col.r, col.g, col.b });
+	}
+}
+
+void stroke(uint8 col)
+{
+	if (colorModeFlag == RGB)
+	{
+		strokeColor.r = col;
+		strokeColor.g = col;
+		strokeColor.b = col;
+	}
+	else if (colorModeFlag == HSB)
+	{
+		strokeColor = colorHSB(Color{ col, col, col });
+	}
+	else if (colorModeFlag == HSL)
+	{
+		strokeColor = colorHSL(Color{ col, col, col });
 	}
 }
 
@@ -688,7 +793,7 @@ inline void clear(Color inCol)
 inline void pixel(int32 x, int32 y)
 {
 	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
-	int32 col = color.r << 16 | color.g << 8 | color.b | 0xff000000;
+	int32 col = strokeColor.r << 16 | strokeColor.g << 8 | strokeColor.b | 0xff000000;
 	pixelBuffer[y*screenWidth + x] = col;
 }
 
@@ -822,7 +927,7 @@ inline void rect(int x, int y, int width, int height)
 				//draw horizontal line
 				while (width--)
 				{
-					pixel(x, y, 0x000000);
+					pixel(x, y, strokeColor);
 					x++;
 				}
 
@@ -849,7 +954,7 @@ inline void rect(int x, int y, int width, int height)
 				//draw horizontal line
 				while (width--)
 				{
-					pixel(x, y);
+					pixel(x, y, fillColor);
 					x++;
 				}
 
@@ -906,7 +1011,7 @@ inline void circle2(int32 x, int32 y, int32 radius)
 				int32 ty = (i / rr) - radius;
 
 				if (tx * tx + ty * ty <= r2)
-					pixel(x + tx, y + ty, 0x000000);
+					pixel(x + tx, y + ty);
 			}
 			radius -= lineWidth;
 			r2 = radius * radius;
@@ -920,7 +1025,7 @@ inline void circle2(int32 x, int32 y, int32 radius)
 				int32 ty = (i / rr) - radius;
 
 				if (tx * tx + ty * ty <= r2)
-					pixel(x + tx, y + ty);
+					pixel(x + tx, y + ty, fillColor);
 			}
 		}
 		else
@@ -931,7 +1036,7 @@ inline void circle2(int32 x, int32 y, int32 radius)
 				int32 ty = (i / rr) - radius;
 
 				if (tx * tx + ty * ty <= r2)
-					pixel(x + tx, y + ty);
+					pixel(x + tx, y + ty, fillColor);
 			}
 		}
 
@@ -992,6 +1097,7 @@ inline void fillCircleData(int xc, int yc, int p, int pb, int pd, int radius, Co
 
 inline void circle(int xc, int yc, int radius)
 {
+	//radius += lineWidth;
 	if (xc + radius < 0 || xc - radius >= screenWidth || yc + radius < 0 || yc - radius >= screenHeight) return;
 
 	if (fillFlag)
@@ -1001,17 +1107,17 @@ inline void circle(int xc, int yc, int radius)
 		int pb = yc + radius + 1, pd = yc + radius + 1; //previous values: to avoid drawing horizontal lines multiple times  (ensure initial value is outside the range)
 		if (lineWidth >= 1)
 		{
-			fillCircleData(xc, yc, p, pb, pd, radius, Color{ 0,0,0 });
+			fillCircleData(xc, yc, p, pb, pd, radius, strokeColor);
 
 			radius -= lineWidth;
 			
 			int p = 3 - (radius << 1);
 			int pb = yc + radius + 1, pd = yc + radius + 1; 
-			fillCircleData(xc, yc, p, pb, pd, radius, color);
+			fillCircleData(xc, yc, p, pb, pd, radius, fillColor);
 		}
 		else
 		{
-			fillCircleData(xc, yc, p, pb, pd, radius, color);
+			fillCircleData(xc, yc, p, pb, pd, radius, fillColor);
 		}
 	}
 	else

@@ -1,4 +1,4 @@
-﻿	#define SDL2	
+﻿	#define SDL2	1
 	//#define WIN_32	
 	#include "framework\creativeframework.cpp"
 

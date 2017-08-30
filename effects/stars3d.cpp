@@ -2,7 +2,7 @@
 	by Martin Fairbanks
 */
 	#define SDL2
-	#include "framework\creativeframework.cpp"
+	#include "..\framework\creativeframework.cpp"
 	#define MAXSTARS 600
 
 	struct Star

@@ -1,6 +1,6 @@
 ﻿	#define SDL2	
 	//#define WIN_32	
-	#include "framework\creativeframework.cpp"
+	#include "..\framework\creativeframework.cpp"
 
 	Sprite myTexture;
 	Sprite mySprite;
@@ -30,9 +30,9 @@ void updateAndDraw(uint32 t)
 	xAngle += 0.1;
 
 	clear(navy);
-	setColor(c64orange);
+	stroke(c64orange);
 	softSprite(sprite0, 100, 100, 16, 16);
-	setColor(turquoise);
+	stroke(turquoise);
 	softSprite(enemy, mouseX, mouseY, 11, 8);
 	uploadPixels();
 

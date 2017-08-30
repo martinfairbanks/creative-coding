@@ -2,7 +2,7 @@
 	by Martin Fairbanks
 */
 	#define SDL2
-	#include "framework\creativeframework.cpp"
+	#include "..\framework\creativeframework.cpp"
 	#define MAX_FLAKES	2000		
 	#define MAX_LAYERS	5
 

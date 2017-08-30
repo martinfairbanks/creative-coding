@@ -2,7 +2,7 @@
 	by Martin Fairbanks
 */
 	#define SDL2
-	#include "framework\creativeframework.cpp"
+	#include "..\framework\creativeframework.cpp"
 	#define MAXSTARS 600
 
 	struct Star
@@ -63,7 +63,7 @@ void updateAndDraw(uint32 t)
 				stars[i].y = float(rand() % screenHeight);
 			}
 			//set color and paint star
-			setColor(0, starColors[stars[i].colorPlane], 0);
+			stroke(0, starColors[stars[i].colorPlane], 0);
 			pixel((int)stars[i].x, (int)stars[i].y);
 		}
 	}
@@ -78,7 +78,7 @@ void updateAndDraw(uint32 t)
 				stars[i].x = float((rand() % 100) + screenWidth);
 				stars[i].y = float(rand() % screenHeight);
 			}
-			setColor(0, 0, starColors[stars[i].colorPlane]);
+			stroke(0, 0, starColors[stars[i].colorPlane]);
 			pixel((int)stars[i].x, (int)stars[i].y);
 			pixel((int)stars[i].x + 1, (int)stars[i].y);
 		}

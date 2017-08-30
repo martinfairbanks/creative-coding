@@ -123,6 +123,9 @@
 	
 	int32 colorModeFlag = RGB;
 
+	Color strokeColor{ 255, 255, 255 };
+	Color fillColor{ 255, 255, 255 };
+
 	void colorMode(int32 mode)
 	{
 		switch (mode)
@@ -509,7 +512,7 @@ void print(const char *message, int x, int y, int32 fontSize = 12)
 		size = i;
 		counter += 6;
 	}
-	SDL_Surface *surf = TTF_RenderText_Solid/*TTF_RenderText_Blended*/(font[size], message, SDL_Color{ (uint8)color.r, (uint8)color.g, (uint8)color.b });
+	SDL_Surface *surf = TTF_RenderText_Solid/*TTF_RenderText_Blended*/(font[size], message, SDL_Color{ (uint8)strokeColor.r, (uint8)strokeColor.g, (uint8)strokeColor.b });
 
 	SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surf);
 	SDL_FreeSurface(surf);

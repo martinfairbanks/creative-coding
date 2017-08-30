@@ -10,6 +10,9 @@
 #include <crtdbg.h> //memory leak check
 #include <map>		//for keyPressed
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "dependencies/stb_image.h"
+
 /* Globals */
 SDL_GLContext glContext;
 SDL_Window *window = 0;
@@ -407,6 +410,56 @@ void cube(float32 size)
 	glEnd();
 }
 
+void pyramid(float32 size)
+{
+	//draw pyramid
+	glBegin(GL_TRIANGLES);
+		//front
+		glColor3f(1.0f, 0.0f, 0.0f);
+		glVertex3f(0.0f, 1.0f, 0.0f);		//top
+		glColor3f(0.0f, 1.0f, 0.0f);
+		glVertex3f(-size, -size, size);     //left
+		glColor3f(0.0f, 0.0f, 1.0f);
+		glVertex3f(size, -size, size);      //right
+
+		//right
+		glColor3f(1.0f, 0.0f, 0.0f);
+		glVertex3f(0.0f, 1.0f, 0.0f);
+		glColor3f(0.0f, 0.0f, 1.0f);
+		glVertex3f(size, -size, size);
+		glColor3f(0.0f, 1.0f, 0.0f);
+		glVertex3f(size, -size, -size);
+
+		//back
+		glColor3f(1.0f, 0.0f, 0.0f);
+		glVertex3f(0.0f, 1.0f, 0.0f);
+		glColor3f(0.0f, 1.0f, 0.0f);
+		glVertex3f(size, -size, -size);
+		glColor3f(0.0f, 0.0f, 1.0f);
+		glVertex3f(-size, -size, -size);
+
+		//left
+		glColor3f(1.0f, 0.0f, 0.0f);
+		glVertex3f(0.0f, 1.0f, 0.0f);
+		glColor3f(0.0f, 0.0f, 1.0f);
+		glVertex3f(-size, -size, -size);
+		glColor3f(0.0f, 1.0f, 0.0f);
+		glVertex3f(-size, -size, size);
+	glEnd();
+
+	//bottom of pyramid
+	glBegin(GL_QUADS);
+		glColor3f(1.0f, 0.0f, 1.0f);
+		glVertex3f(size, -size, size);
+		glColor3f(1.0f, 0.0f, 0.0f);
+		glVertex3f(-size, -size, size);
+		glColor3f(0.0f, 1.0f, 0.0f);
+		glVertex3f(-size, -size, -size);
+		glColor3f(0.0f, 0.0f, 1.0f);
+		glVertex3f(size, -size, -size);
+	glEnd();
+}
+
 void set2dProjection()
 {
 	glMatrixMode(GL_PROJECTION);
@@ -445,6 +498,47 @@ void set3dProjection()
 	glEnable(GL_DEPTH_TEST);
 
 	translate(0.0f, 0.0f, -5.0f);
+}
+
+unsigned int loadTexture(const char *filename)
+{
+	int width, height, bpp;
+	unsigned char *pixels = stbi_load(filename, &width, &height, &bpp, 3);
+	unsigned int id;
+
+	//tells OpenGL we want to generate 1 texture
+	glGenTextures(1, &id);
+
+	//tells OpenGL to bind the named texture to a texture target
+	glBindTexture(GL_TEXTURE_2D, id);
+
+	//set texture parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);	//linear min filter
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);	//linear mag filter
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+	stbi_image_free(pixels);
+	return id;
+}
+
+void sprite(uint32 tex, float32 x, float32 y, float32 w, float32 h)
+{
+	glLoadIdentity();
+	glTranslatef(x, y, 0.0);
+
+	glBindTexture(GL_TEXTURE_2D, tex);
+
+	//place texture on quad
+	glBegin(GL_QUADS);
+		glTexCoord2f(0.0f, 0.0f);
+		glVertex2f(0.0f, 0.0f);
+		glTexCoord2f(1.0f, 0.0f);
+		glVertex2f(w, 0.0f);
+		glTexCoord2f(1.0f, 1.0f);
+		glVertex2f(w, h);
+		glTexCoord2f(0.0f, 1.0f);
+		glVertex2f(0.0f, h);
+	glEnd();
 }
 
 void screen(int width, int height, bool screen, char *title)
@@ -535,14 +629,16 @@ int main(int argc, char** argv)
 		{
 			switch (event.type)
 			{
-				//Get new dimensions and repaint on window size change  
-				case SDL_WINDOWEVENT_SIZE_CHANGED:
+				//get new dimensions and repaint on window size change  
+				case SDL_WINDOWEVENT:
 				{
-					/*screenWidth = event.window.data1;
-					screenHeight = event.window.data2;
-					set3dProjection();*/
+					if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
+					{
+						screenWidth = event.window.data1;
+						screenHeight = event.window.data2;
+						set3dProjection();
+					}
 				} break;
-
 				case SDL_KEYDOWN:
 				{
 					switch (event.key.keysym.sym)
