@@ -4,7 +4,7 @@
 
 void setup()
 {
-	screen(1920, 1080, true, "pixel buffer");
+	screen(1920, 1080, true, "sinewaves");
 	clear(teal); 
 	noStroke();
 	colorMode(HSB);
