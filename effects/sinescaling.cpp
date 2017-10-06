@@ -1,20 +1,20 @@
 	#define SDL2
-	#include "framework\creativeframework.cpp"
+	#include "..\framework\creativeframework.cpp"
 
-	const int32 maxEntities = 200;
+	const int32 maxEntities = 150;
 
 	struct Entity
 	{
-		int32 x = random(screenWidth);
-		int32 y = random(screenHeight);
+		int32 x = random(windowWidth);
+		int32 y = random(windowHeight);
 		int32 maxDiameter = 50;
-		float32 angle = randomf() * 2;
-		float32 speed = (randomf() + 0.1) / 10;
+		real32 angle = randomf() * 2;
+		real32 speed = (randomf() + 0.1) / 10;
 		Color col = colorHSL(Color{ random(255), 255, random(255) });
-
+		//ColorRGBA col = { tCol.r, tCol.g, tCol.b, random(20,255) };
 		void updateAndDraw()
 		{
-			float32 d3 = 10 + (sin(angle + PI32) * maxDiameter / 2) + maxDiameter / 2;
+			real32 d3 = 10 + (sin(angle + PI) * maxDiameter / 2) + maxDiameter / 2;
 			angle += speed;
 			fill(col);
 			circle(x, y, d3);

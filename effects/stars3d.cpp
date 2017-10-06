@@ -7,24 +7,24 @@
 
 	struct Star
 	{
-		float32 xpos, ypos;
+		real32 xpos, ypos;
 		int32 zpos, speed;
 		uint8 color;
 	} stars[MAXSTARS];
 
 	static int centerX;
 	static int centerY;
-	static float32 prevPosX;
-	static float32 prevPosY;
+	static real32 prevPosX;
+	static real32 prevPosY;
 
 	void initStar(Star* star, int i)
 	{
 		//randomly init stars, put them around the center of the screen
-		star->xpos = float(((rand() % screenWidth) * -1) + centerX);
-		star->ypos = float(((rand() % screenHeight) * -1) + centerY);
+		star->xpos = float(((rand() % windowWidth) * -1) + centerX);
+		star->ypos = float(((rand() % windowHeight) * -1) + centerY);
 
 		//change viewpoint
-		if (mouseX > screenWidth / 2)
+		if (mouseX > windowWidth / 2)
 		{
 			star->xpos *= 800.0;
 			star->ypos *= 800.0;
@@ -44,8 +44,8 @@ void setup()
 {
 	//vSync = false;
 	screen(960, 540, true, "stars3d");
-	centerX = screenWidth / 2;
-	centerY = screenHeight / 2;
+	centerX = windowWidth / 2;
+	centerY = windowHeight / 2;
 	
 	for (int i = 0; i < MAXSTARS; i++)
 	{
@@ -70,17 +70,17 @@ void updateAndDraw(uint32 t)
 		stars[i].zpos -= stars[i].speed;
 		
 		//compute 3D position
-		float32 tempX = (stars[i].xpos / stars[i].zpos) + centerX;
-		float32 tempY = (stars[i].ypos / stars[i].zpos) + centerY;
+		real32 tempX = (stars[i].xpos / stars[i].zpos) + centerX;
+		real32 tempY = (stars[i].ypos / stars[i].zpos) + centerY;
 
 		//check if star has moved outside of screen
-		if (tempX < 0 || tempX > screenWidth - 1 || tempX < 0 || tempY > screenHeight - 1 || stars[i].zpos <= 0)
+		if (tempX < 0 || tempX > windowWidth - 1 || tempX < 0 || tempY > windowHeight - 1 || stars[i].zpos <= 0)
 		{
 			initStar(stars + i, i + 1);
 			continue;
 		}
 
-		if (mouseX > screenWidth / 2)
+		if (mouseX > windowWidth / 2)
 		{
 			if (tempX == prevPosX || tempY ==prevPosY)
 				pixel((int)tempX, (int)tempY, 255, 255, 255);

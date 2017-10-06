@@ -19,15 +19,16 @@ void setup()
 
 	//init snowflakes
 	for (int i = 0; i < MAX_FLAKES; i++) {
-		snow[i].x = rand() % screenWidth;
-		snow[i].y = rand() % screenHeight;
+		snow[i].x = rand() % windowWidth;
+		snow[i].y = rand() % windowHeight;
 		snow[i].layer = rand() % MAX_LAYERS;
 	}
+	clear(black);
 }
 
 void updateAndDraw(uint32 t)
 {
-	clear(40,20,220);
+	clear(40, 20, 220);
 
 	for (int i = 0; i < MAX_FLAKES; i++)
 	{
@@ -35,9 +36,9 @@ void updateAndDraw(uint32 t)
 		snow[i].y += snow[i].layer + 1;
 
 		//check if snowflake moved outside of screen
-		if (snow[i].y > screenHeight)
+		if (snow[i].y > windowHeight)
 		{
-			snow[i].x = rand() % screenWidth;
+			snow[i].x = rand() % windowWidth;
 			snow[i].y = 0;
 			snow[i].layer = rand() % MAX_LAYERS;
 		}

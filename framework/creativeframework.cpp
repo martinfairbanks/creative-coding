@@ -1,5 +1,12 @@
+/* TODO:	mousepress and keypress up/down, scroll wheel
+			line blending
+			x64 build
+			batch build and make file
+*/
+
 #include <stdint.h>
 #include <stdlib.h> //srand
+#include <stdio.h>
 #include <crtdbg.h> //memory leak check
 #include <math.h>
 #include <float.h>
@@ -15,16 +22,12 @@ typedef uint16_t uint16;
 typedef uint32_t uint32;
 typedef uint64_t uint64;
 
-typedef float float32;
-typedef double float64;
-//#define _CRT_SECURE_NO_DEPRECATE
-#define PI32 3.14159265359f
-#define SWAP(x, y)\
-		x = x + y; \
-		y = x - y; \
-		x = x - y;
+typedef float real32;
+typedef double real64;
 
-#if defined(_DEBUG)
+//#define FRAMEWORK_INTERNAL
+
+#if defined(_DEBUG) || defined(FRAMEWORK_INTERNAL)
 #include <iostream>
 #define LOG(x) std::cout << x << std::endl;
 #define LOGERROR(x)\
@@ -33,14 +36,15 @@ typedef double float64;
 				SDL_Quit(); \
 				exit(1);
 #define Assert(expression) if(!(expression)) { *(int *)0 = 0; }
+#define _CRT_SECURE_NO_DEPRECATE
 #else
 	#define LOG(x) 
 	#define LOGERROR(x)
 	#define Assert(expression)
 #endif
 
-int32 screenWidth;
-int32 screenHeight; 
+int32 windowWidth;
+int32 windowHeight; 
 bool32 fullscreen = false;
 bool32 running = true;
 bool32 vSync = true;
@@ -73,12 +77,19 @@ enum MouseButtons
 };
 
 /* ----- Math ----- */
+#define PI 3.14159265358979323846
+#define TWO_PI 6.28318530717958647693
+#define SWAP(x, y)\
+		x = x + y; \
+		y = x - y; \
+		x = x - y;
+
 struct vec2
 {
-	float32 x;
-	float32 y;
+	real32 x;
+	real32 y;
 	vec2() { };
-	vec2(float32 X, float32 Y) : x(X), y(Y) {}
+	vec2(real32 X, real32 Y) : x(X), y(Y) {}
 
 	//overloaded operator for vector addition: v3 = v1 + v2;
 	vec2 operator+(const vec2& v2) const
@@ -108,12 +119,12 @@ struct vec2
 	}
 
 	//multiply by a scalar number
-	vec2 operator*(float32 scalar)
+	vec2 operator*(real32 scalar)
 	{
 		return vec2(x * scalar, y * scalar);
 	}
 
-	vec2& operator*=(float32 scalar)
+	vec2& operator*=(real32 scalar)
 	{
 		x *= scalar;
 		y *= scalar;
@@ -121,12 +132,12 @@ struct vec2
 	}
 
 	//divide by a scalar number
-	vec2 operator/(float32 scalar)
+	vec2 operator/(real32 scalar)
 	{
 		return vec2(x / scalar, y / scalar);
 	}
 
-	vec2& operator/=(float32 scalar)
+	vec2& operator/=(real32 scalar)
 	{
 		x /= scalar;
 		y /= scalar;
@@ -135,28 +146,28 @@ struct vec2
 
 	//calculate length (magnitude) of the vector, square root of x^2 + y^2
 	//The Pythagorean Theorem
-	float32 length() { return sqrt(x * x + y * y); }
+	real32 length() { return sqrt(x * x + y * y); }
 
 	//calculate the angle
-	float32 angle() { return atan2(y, x); }
+	real32 angle() { return atan2(y, x); }
 
 	//set length of vector
-	void setMag(float32 length)
+	void setMag(real32 length)
 	{
-		float32 a = angle();
+		real32 a = angle();
 		x = cos(a) * length;
 		y = sin(a) * length;
 	}
 
-	void setAngle(float32 angle)
+	void setAngle(real32 angle)
 	{
-		float32 l = length();
+		real32 l = length();
 		x = cos(angle) * l;
 		y = sin(angle) * l;
 	}
 
 	//limit the magnitude the vector
-	void limit(float32 max)
+	void limit(real32 max)
 	{
 		if (length() > max)
 			setMag(max);
@@ -166,7 +177,7 @@ struct vec2
 	//to normalize a vector - multiply it by the inverse of its length
 	void normalize()
 	{
-		float32 l = length();
+		real32 l = length();
 		if (l > 0) //avoid divide by 0
 		{
 			(*this) *= 1 / l;
@@ -176,12 +187,12 @@ struct vec2
 
 struct vec3
 {
-	float32 x;
-	float32 y;
-	float32 z;
+	real32 x;
+	real32 y;
+	real32 z;
 
 	vec3() { };
-	vec3(float32 X, float32 Y, float32 Z) : x(X), y(Y), z(Z) {}
+	vec3(real32 X, real32 Y, real32 Z) : x(X), y(Y), z(Z) {}
 	//overloaded operator for vector addition: v3 = v1 + v2;
 	vec3 operator+(const vec3& v2) const
 	{
@@ -212,12 +223,12 @@ struct vec3
 	}
 
 	//multiply by a scalar number
-	vec3 operator*(float32 scalar)
+	vec3 operator*(real32 scalar)
 	{
 		return vec3(x * scalar, y * scalar, z * scalar);
 	}
 
-	vec3& operator*=(float32 scalar)
+	vec3& operator*=(real32 scalar)
 	{
 		x *= scalar;
 		y *= scalar;
@@ -226,12 +237,12 @@ struct vec3
 	}
 
 	//divide by a scalar number
-	vec3 operator/(float32 scalar)
+	vec3 operator/(real32 scalar)
 	{
 		return vec3(x / scalar, y / scalar, z / scalar);
 	}
 
-	vec3& operator/=(float32 scalar)
+	vec3& operator/=(real32 scalar)
 	{
 		x /= scalar;
 		y /= scalar;
@@ -241,14 +252,14 @@ struct vec3
 	}
 
 	//calculate length (magnitude) of the vector, square root of x^2 + y^2
-	//The Pythagorean Theorem
-	float32 length() { return sqrt(x * x + y * y); }
+	//the pythagorean theorem
+	real32 length() { return sqrt(x * x + y * y); }
 
 	//normalizing a vector makes its length equal to 1.
 	//to normalize a vector - multiply it by the inverse of its length
 	void normalize()
 	{
-		float32 l = length();
+		real32 l = length();
 		if (l > 0) //avoid divide by 0
 		{
 			(*this) *= 1 / l;
@@ -256,13 +267,15 @@ struct vec3
 	}
 };
 
-
+//TODO: check these functions, dosen't work if not cast to doubles?
 inline int32 random(int32 min, int32 max)
 {
 	/* ex:  Random(-10,20) -> will give -10 to, and including, 20. */
 	max += 1;
 	min -= 1;
-	return ((double)rand() / (RAND_MAX + 1) * (max - min) + min);
+	int32 result = ((double)rand() / (RAND_MAX + 1) * (max - min) + min);
+	return result;
+	//return (rand() / (RAND_MAX + 1) * (max - min) + min);
 }
 
 inline int32 random(int32 max)
@@ -273,14 +286,14 @@ inline int32 random(int32 max)
 }
 
 //random float between 0 and 1
-inline float32 randomf()
+inline real32 randomf()
 {
 	return ((float)rand() / (RAND_MAX));
 	//random float between -1 and 1
 	//return (((float)rand() / (RAND_MAX)) * 2 - 1.0f);
 }
 
-inline float32 randomf(float32 min, float32 max)
+inline real32 randomf(real32 min, real32 max)
 {
 	return min + randomf() * (max - min);
 }
@@ -290,29 +303,30 @@ inline vec2 random2d()
 {
 	vec2 vec{ 1.0, 1.0 };
 	//vec.normalize();
-	vec.setAngle(randomf() * PI32 * 2);
+	vec.setAngle(randomf() * PI * 2);
 	return vec;
 }
 
 //convert radians to degrees
-float degrees(float32 radians)
+float degrees(real32 radians)
 {
 
-	float degrees = (radians / (2 * PI32)) * 360;
+	float degrees = (radians / (2 * PI)) * 360;
 	return degrees;
 }
 
 //convert degrees to radians
-float radians(float32 degrees)
+float radians(real32 degrees)
 {
-	float radian = (degrees / 360) * 2 * PI32;
+	float radian = (degrees / 360) * 2 * PI;
 	return radian;
 }
 
 //calculates the distance between 2 points
-double dist(int32 x1, int32 y1, int32 x2, int32 y2)
+real32 dist(real32 x1, real32 y1, real32 x2, real32 y2)
 {
-	return sqrt(pow(x1 - x2, 2.0) + pow(y1 - y2, 2.0));
+	//return sqrt(pow(x1 - x2, 2.0) + pow(y1 - y2, 2.0));
+	return sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 }
 
 int32 constrain(int32 value, int32 min, int32 max)
@@ -320,12 +334,12 @@ int32 constrain(int32 value, int32 min, int32 max)
 	return (value < min) ? min : ((value > max) ? max : value);
 }
 
-float32 constrainf(float32 value, float32 min, float32 max)
+real32 constrainf(real32 value, real32 min, real32 max)
 {
 	return (value < min) ? min : ((value > max) ? max : value);
 }
 
-float32 mapVal(float32 value, float32 inMin, float32 inMax, float32 outMin, float32 outMax)
+real32 mapVal(real32 value, real32 inMin, real32 inMax, real32 outMin, real32 outMax)
 {
 	if (fabs(inMin - inMax) < FLT_EPSILON)
 	{
@@ -333,7 +347,7 @@ float32 mapVal(float32 value, float32 inMin, float32 inMax, float32 outMin, floa
 	}
 	else
 	{
-		float32 outVal = ((value - inMin) / (inMax - inMin) * (outMax - outMin) + outMin);
+		real32 outVal = ((value - inMin) / (inMax - inMin) * (outMax - outMin) + outMin);
 
 		if (outMax < outMin)
 		{
@@ -350,79 +364,118 @@ float32 mapVal(float32 value, float32 inMin, float32 inMax, float32 outMin, floa
 	}
 }
 
-#if defined(SDL2)
-	#include "sdl2_framework.cpp"
-#endif
+vec2 center;	//center location in window
 
-#if defined(WIN_32)
-	#include "win32_framework.cpp"
-#endif
 
-#if defined(OPENGL) | defined(OPENGL4)
-uint8 joyUp;
-uint8 joyDown;
-uint8 joyLeft;
-uint8 joyRight;
-uint8 joyStart;
-uint8 joyBack;
-uint8 joyLeftShoulder;
-uint8 joyRightShoulder;
-uint8 joyAButton;
-uint8 joyBButton;
-uint8 joyXButton;
-uint8 joyYButton;
-int32 joyStickX;
-int32 joyStickY;
-int32 joyRightStickX;
-int32 joyRightStickY;
-const int32 joyDeadZone = 8000;
+/* File I/O */
 
-struct ColorRGBA
+//remember to free the memory after you called this function!
+char* loadFile(const char* filename)
 {
-	float32 r;
-	float32 g;
-	float32 b;
-	float32 a;
-} color{ 1.0f, 1.0f, 1.0f, 1.0f };
+	FILE* fp = fopen(filename, "r");
+	//move pointer to the end of the file to get length
+	fseek(fp, 0, SEEK_END);
+	long file_length = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+	char *contents = (char *)malloc((file_length + 1) * sizeof(char));
 
-ColorRGBA strokeColor{ 0.0f, 0.0f, 0.0f, 1.0f };
-ColorRGBA fillColor{ 0.0f, 0.0f, 0.0f, 1.0f };
-
-static ColorRGBA colorfromhex(const unsigned int hex)
-{
-	return ColorRGBA{ float32((hex >> 16) & 0xFF) / 255.0f, float32((hex >> 8) & 0xFF) / 255.0f, float32((hex >> 0) & 0xFF) / 255.0f, 1.0f };
+	//clear memory
+	for (int i = 0; i < file_length + 1; i++) {
+		contents[i] = 0;
+	}
+	//read file
+	fread(contents, 1, file_length, fp);
+	//insert null terminator
+	contents[file_length + 1] = '\0';
+	fclose(fp);
+	return contents;
 }
 
-const ColorRGBA black{ 0.0f, 0.0f, 0.0f, 1.0f };
-const ColorRGBA white{ 1.0f, 1.0f, 1.0f, 1.0f };
-const ColorRGBA red{ 1.0f, 0.0f, 0.0f, 1.0f };
-const ColorRGBA green{ 0.0f , 1.0f, 0.0f, 1.0f };
-const ColorRGBA blue{ 0.0f, 0.0f, 1.0f, 1.0f };
-const ColorRGBA yellow{ 1.0f, 1.0f, 0.0f, 1.0f };
-const ColorRGBA cyan{ 0.0f, 1.0f, 1.0f, 1.0f };
-const ColorRGBA magenta{ 1.0f, 0.0f, 1.0f, 1.0f };
-const ColorRGBA cornflowerblue = colorfromhex(0x6495ED);
-const ColorRGBA azure = colorfromhex(0xF0FFFF);
-const ColorRGBA turquoise = colorfromhex(0x40E0D0);
-const ColorRGBA gold = colorfromhex(0xFFD700);
-const ColorRGBA silver = colorfromhex(0xC0C0C0);
-const ColorRGBA pink = colorfromhex(0xFFC0CB);
-const ColorRGBA teal = colorfromhex(0x008080);
-#endif
 
-#if defined(OPENGL)
-	#include "opengl_framework.cpp"
-#endif
+/* Colors */
 
-#if defined(OPENGL4)
-	#include "opengl4_framework.cpp"
-#endif
+struct Color
+{
+	int32 r;
+	int32 g;
+	int32 b;
+	Color() {};
+	Color(int32 red, int32 green, int32 blue) { r = red; g = green; b = blue; }
+} color{ 0xff, 0xff, 0xff };
 
-#if defined(SDL2) | defined(WIN_32)
+Color black{ 0,0,0 };
+Color white{ 255,255,255 };
+Color c64red{ 104, 55, 43 };
+Color c64cyan{ 112, 164, 178 };
+Color c64purple{ 111, 61, 134 };
+Color c64green{ 88, 141, 67 };
+Color c64blue{ 53, 40, 121 };
+Color c64yellow{ 184, 199, 111 };
+Color c64orange{ 111, 79, 37 };
+Color c64brown{ 67, 57, 0 };
+Color c64lightred{ 154, 103, 89 };
+Color c64darkgrey{ 68, 68, 68 };
+Color c64grey{ 108, 108, 108 };
+Color c64lightgreen{ 154, 210, 132 };
+Color c64lightblue{ 108, 94, 181 };
+Color c64lightgrey{ 149, 149, 149 };
+Color red{ 255,0,0 };
+Color green{ 0,255,0 };
+Color blue{ 0,0,255 };
+Color yellow{ 255,255,0 };
+Color cyan{ 0,255,255 };
+Color magenta{ 255,0,255 };
+Color purple{ 128, 0, 128 };
+Color gray{ 128, 128, 128 };
+Color grey{ 192, 192, 192 };
+Color maroon{ 128, 0, 0 };
+Color darkgreen{ 0, 128, 0 };
+Color navy{ 0, 0, 128 };
+Color teal{ 0, 128, 128 };
+Color olive{ 128, 128, 0 };
+Color orange{ 255,127,50 };
+Color cornflowerblue{ 101, 156, 239 };
+Color azure{ 0, 127, 255 };
+Color turquoise{ 48, 213, 200 };
+Color gold{ 255, 215, 0 };
+Color silver{ 192, 192, 192 };
+Color pink{ 255, 192, 203 };
+
+enum ColorModes
+{
+	RGB,
+	HSB,
+	HSL
+};
+
+int32 colorModeFlag = RGB;
+
+void colorMode(int32 mode)
+{
+	switch (mode)
+	{
+	case RGB:
+		colorModeFlag = RGB;
+		break;
+	case HSB:
+		colorModeFlag = HSB;
+		break;
+	case HSL:
+		colorModeFlag = HSL;
+		break;
+	}
+}
 //converts HSB(=HSV) color to RGB color
 Color colorHSB(Color colorHSB)
 {
-	float32 r, g, b, h, s, v;
+	if (colorHSB.r < 0)
+		colorHSB.r = 0;
+	if (colorHSB.g < 0)
+		colorHSB.g = 0;
+	if (colorHSB.b < 0)
+		colorHSB.b = 0;
+
+	real32 r, g, b, h, s, v;
 	h = colorHSB.r / 256.0;
 	s = colorHSB.g / 256.0;
 	v = colorHSB.b / 256.0;
@@ -430,7 +483,7 @@ Color colorHSB(Color colorHSB)
 	if (s == 0.0) r = g = b = v;
 	else
 	{
-		float32 f, p, q, t;
+		real32 f, p, q, t;
 		int32 i;
 		h *= 6.0;
 		i = int32(floor(h));
@@ -441,28 +494,29 @@ Color colorHSB(Color colorHSB)
 
 		switch (i)
 		{
-			case 0: r = v; g = t; b = p; break;
-			case 1: r = q; g = v; b = p; break;
-			case 2: r = p; g = v; b = t; break;
-			case 3: r = p; g = q; b = v; break;
-			case 4: r = t; g = p; b = v; break;
-			case 5: r = v; g = p; b = q; break;
+		case 0: r = v; g = t; b = p; break;
+		case 1: r = q; g = v; b = p; break;
+		case 2: r = p; g = v; b = t; break;
+		case 3: r = p; g = q; b = v; break;
+		case 4: r = t; g = p; b = v; break;
+		case 5: r = v; g = p; b = q; break;
 		}
 	}
 	Color col;
 	col.r = int32(r * 255.0);
 	col.g = int32(g * 255.0);
 	col.b = int32(b * 255.0);
+	//col.a = 255;
 	return col;
 }
 
 Color colorHSL(Color colorHSL)
 {
-	float32 r, g, b, h, s, l;
-	float32 temp1, temp2, tempr, tempg, tempb;
-	h = (float32)colorHSL.r / 256.0f;
-	s = (float32)colorHSL.g / 256.0f;
-	l = (float32)colorHSL.b / 256.0f;
+	real32 r, g, b, h, s, l;
+	real32 temp1, temp2, tempr, tempg, tempb;
+	h = (real32)colorHSL.r / 256.0f;
+	s = (real32)colorHSL.g / 256.0f;
+	l = (real32)colorHSL.b / 256.0f;
 
 	if (s == 0) r = g = b = l;
 	else
@@ -499,8 +553,82 @@ Color colorHSL(Color colorHSL)
 	col.r = int32(r * 255.0);
 	col.g = int32(g * 255.0);
 	col.b = int32(b * 255.0);
+	//col.a = 255;
 	return col;
 }
+
+#if defined(SDL2)
+	#include "sdl2_framework.cpp"
+#endif
+
+#if defined(WIN_32)
+	#include "win32_framework.cpp"
+#endif
+
+#if defined(OPENGL) || defined(OPENGL4)
+uint8 joyUp;
+uint8 joyDown;
+uint8 joyLeft;
+uint8 joyRight;
+uint8 joyStart;
+uint8 joyBack;
+uint8 joyLeftShoulder;
+uint8 joyRightShoulder;
+uint8 joyAButton;
+uint8 joyBButton;
+uint8 joyXButton;
+uint8 joyYButton;
+int32 joyStickX;
+int32 joyStickY;
+int32 joyRightStickX;
+int32 joyRightStickY;
+const int32 joyDeadZone = 8000;
+
+struct ColorRGBA
+{
+	real32 r;
+	real32 g;
+	real32 b;
+	real32 a;
+};
+
+ColorRGBA strokeColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+ColorRGBA fillColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+/*
+static ColorRGBA colorfromhex(const unsigned int hex)
+{
+	return ColorRGBA{ real32((hex >> 16) & 0xFF) / 255.0f, real32((hex >> 8) & 0xFF) / 255.0f, real32((hex >> 0) & 0xFF) / 255.0f, 1.0f };
+}
+
+const ColorRGBA black{ 0.0f, 0.0f, 0.0f, 1.0f };
+const ColorRGBA white{ 1.0f, 1.0f, 1.0f, 1.0f };
+const ColorRGBA red{ 1.0f, 0.0f, 0.0f, 1.0f };
+const ColorRGBA green{ 0.0f , 1.0f, 0.0f, 1.0f };
+const ColorRGBA blue{ 0.0f, 0.0f, 1.0f, 1.0f };
+const ColorRGBA yellow{ 1.0f, 1.0f, 0.0f, 1.0f };
+const ColorRGBA cyan{ 0.0f, 1.0f, 1.0f, 1.0f };
+const ColorRGBA magenta{ 1.0f, 0.0f, 1.0f, 1.0f };
+const ColorRGBA cornflowerblue = colorfromhex(0x6495ED);
+const ColorRGBA azure = colorfromhex(0xF0FFFF);
+const ColorRGBA turquoise = colorfromhex(0x40E0D0);
+const ColorRGBA gold = colorfromhex(0xFFD700);
+const ColorRGBA silver = colorfromhex(0xC0C0C0);
+const ColorRGBA pink = colorfromhex(0xFFC0CB);
+const ColorRGBA teal = colorfromhex(0x008080);
+*/
+#endif
+
+#if defined(OPENGL)
+	#include "opengl_framework.cpp"
+#endif
+
+#if defined(OPENGL4)
+	#include "opengl4_framework.cpp"
+#endif
+
+
+#if defined(SDL2) | defined(WIN_32)
+
 /*
 void setColor(int32 r, int32 g, int32 b)
 {
@@ -554,109 +682,177 @@ void setColor(uint8 col)
 	}
 }
 */
-void fill(int32 r, int32 g, int32 b)
+
+
+void fill(int32 r, int32 g, int32 b, int32 alpha = 255)
 {
+	Color tempCol;
 	if (colorModeFlag == RGB)
 	{
-		fillColor.r = r;
-		fillColor.g = g;
-		fillColor.b = b;
+		tempCol.r = r;
+		tempCol.g = g;
+		tempCol.b = b;
 	}
 	else if (colorModeFlag == HSB)
 	{
-		fillColor = colorHSB(Color{ r, g, b });
+		tempCol = colorHSB(Color{ r, g, b });
 	}
 	else if (colorModeFlag == HSL)
 	{
-		fillColor = colorHSL(Color{ r, g, b });
+		tempCol = colorHSL(Color{ r, g, b });
 	}
+	fillColor.r = tempCol.r;
+	fillColor.g = tempCol.g;
+	fillColor.b = tempCol.b;
+	fillColor.a = alpha;
 }
 
-void fill(Color col)
+void fill(Color col, int32 alpha = 255)
 {
+	Color tempCol;
+	if (colorModeFlag == RGB)
+	{
+		tempCol = col;
+	}
+	else if (colorModeFlag == HSB)
+	{
+		tempCol = colorHSB(Color{ col.r, col.g, col.b });
+	}
+	else if (colorModeFlag == HSL)
+	{
+		tempCol = colorHSL(Color{ col.r, col.g, col.b });
+		
+	}
+	fillColor.r = tempCol.r;
+	fillColor.g = tempCol.g;
+	fillColor.b = tempCol.b;
+	fillColor.a = alpha;
+}
+
+void fill(ColorRGBA col)
+{
+
+	if (colorModeFlag == HSB || colorModeFlag == HSL)
+	{
+		Color tempCol;
+		if (colorModeFlag == HSB)
+		{
+			tempCol = colorHSB(Color{ col.r, col.g, col.b });
+		}
+		else if (colorModeFlag == HSL)
+		{
+			tempCol = colorHSL(Color{ col.r, col.g, col.b });
+
+		}
+		fillColor.r = tempCol.r;
+		fillColor.g = tempCol.g;
+		fillColor.b = tempCol.b;
+		fillColor.a = col.a;
+	}
+
 	if (colorModeFlag == RGB)
 	{
 		fillColor = col;
 	}
-	else if (colorModeFlag == HSB)
-	{
-		fillColor = colorHSB(Color{ col.r, col.g, col.b });
-	}
-	else if (colorModeFlag == HSL)
-	{
-		fillColor = colorHSL(Color{ col.r, col.g, col.b });
-	}
 }
 
-void fill(uint8 col)
+void fill(uint8 col, int32 alpha = 255)
 {
+	Color tempCol;
 	if (colorModeFlag == RGB)
 	{
-		fillColor.r = col;
-		fillColor.g = col;
-		fillColor.b = col;
+		tempCol.r = col;
+		tempCol.g = col;
+		tempCol.b = col;
 	}
 	else if (colorModeFlag == HSB)
-	{
-		fillColor = colorHSB(Color{ col, col, col });
+	{ 
+		tempCol = colorHSB(Color{ col, col, col });
+		
 	}
 	else if (colorModeFlag == HSL)
 	{
-		fillColor = colorHSL(Color{ col, col, col });
+		tempCol = colorHSL(Color{ col, col, col });
 	}
+	fillColor.r = tempCol.r;
+	fillColor.g = tempCol.g;
+	fillColor.b = tempCol.b;
+	fillColor.a = alpha;
 }
 
 
-void stroke(int32 r, int32 g, int32 b)
+void stroke(int32 r, int32 g, int32 b, int32 alpha = 255)
 {
+	Color tempCol;
 	if (colorModeFlag == RGB)
 	{
-		strokeColor.r = r;
-		strokeColor.g = g;
-		strokeColor.b = b;
+		tempCol.r = r;
+		tempCol.g = g;
+		tempCol.b = b;
+		
 	}
 	else if (colorModeFlag == HSB)
 	{
-		strokeColor = colorHSB(Color{ r, g, b });
+		tempCol = colorHSB(Color{ r, g, b });
+
 	}
 	else if (colorModeFlag == HSL)
 	{
-		strokeColor = colorHSL(Color{ r, g, b });
+		tempCol = colorHSL(Color{ r, g, b });
 	}
+
+	strokeColor.r = tempCol.r;
+	strokeColor.g = tempCol.g;
+	strokeColor.b = tempCol.b;
+	strokeColor.a = alpha;
 }
 
-void stroke(Color col)
+void stroke(Color col, int32 alpha = 255)
 {
+	Color tempCol;
 	if (colorModeFlag == RGB)
 	{
-		strokeColor = col;
+		tempCol = col;
+
 	}
 	else if (colorModeFlag == HSB)
 	{
-		strokeColor = colorHSB(Color{ col.r, col.g, col.b });
+		tempCol = colorHSB(Color{ col.r, col.g, col.b });
+		
 	}
 	else if (colorModeFlag == HSL)
 	{
-		strokeColor = colorHSL(Color{ col.r, col.g, col.b });
+		tempCol = colorHSL(Color{ col.r, col.g, col.b });
+		
 	}
+	strokeColor.r = tempCol.r;
+	strokeColor.g = tempCol.g;
+	strokeColor.b = tempCol.b;
+	strokeColor.a = alpha;
 }
 
-void stroke(uint8 col)
+
+void stroke(uint8 col, int32 alpha = 255)
 {
+	Color tempCol;
 	if (colorModeFlag == RGB)
 	{
-		strokeColor.r = col;
-		strokeColor.g = col;
-		strokeColor.b = col;
+		tempCol.r = col;
+		tempCol.g = col;
+		tempCol.b = col;
 	}
 	else if (colorModeFlag == HSB)
 	{
-		strokeColor = colorHSB(Color{ col, col, col });
+		tempCol = colorHSB(Color{ col, col, col });
 	}
 	else if (colorModeFlag == HSL)
 	{
-		strokeColor = colorHSL(Color{ col, col, col });
+		tempCol = colorHSL(Color{ col, col, col });
 	}
+	strokeColor.r = tempCol.r;
+	strokeColor.g = tempCol.g;
+	strokeColor.b = tempCol.b;
+	strokeColor.a = alpha;
 }
 
 int32 color32(int32 r, int32 g, int32 b)
@@ -688,24 +884,6 @@ void noStroke()
 	lineWidth = 0;
 }
 
-/* clear the pixelbuffer with specific color */
-/*inline void clear(int32 col)
-{
-	//memset(pixelBuffer, color, screenWidth * screenHeight * 4);
-	void *memory = pixelBuffer;
-	int32 count = screenWidth * screenHeight;
-
-	/* memory fill */
-	/*_asm
-	{
-		cld								//clear direction flag
-		mov edi, memory					//move pixelBuffer pointer into edi
-		mov ecx, count					//move loop counter into ecx
-		mov eax, col					//move color into eax
-		rep stosd						//fill memory
-	}
-}*/
-
 inline void clear(uint8 inCol)
 {
 	uint32 col;
@@ -725,12 +903,12 @@ inline void clear(uint8 inCol)
 		break;
 	}
 
-	memset(pixelBuffer, col, screenWidth * screenHeight * 4);
+	memset(pixelBuffer, col, windowWidth * windowHeight * 4);
 }
 
 inline void clear(uint8 r, uint8 g, uint8 b)
 {
-	uint32 col;
+	int32 col;
 	Color c;
 	switch (colorModeFlag)
 	{
@@ -743,12 +921,14 @@ inline void clear(uint8 r, uint8 g, uint8 b)
 		col = c.r << 16 | c.g << 8 | c.b | 0xff000000;
 		break;
 	default:	//RGB
-		col = r << 16 | g << 8 | b | 0xff000000;
+		col = r << 16 | g << 8 | b;// | 0xff000000;
 		break;
 	}
-	//memset(pixelBuffer, col, screenWidth * screenHeight * 4);
+	//memset(pixelBuffer, col, (windowWidth * windowHeight));
+	
+	//x86 build only
 	void *memory = pixelBuffer;
-	int32 count = screenWidth * screenHeight;
+	int32 count = windowWidth * windowHeight;
 
 	_asm
 	{
@@ -778,11 +958,11 @@ inline void clear(Color inCol)
 		col = inCol.r << 16 | inCol.g << 8 | inCol.b | 0xff000000;
 		break;
 	}
-	//memset(pixelBuffer, col, screenWidth * screenHeight * 4);
+	//memset(pixelBuffer, col, windowWidth * windowHeight * 4);
 
+	//x86 build only
 	void *memory = pixelBuffer;
-	int32 count = screenWidth * screenHeight;
-
+	int32 count = windowWidth * windowHeight;
 	_asm
 	{
 		cld
@@ -793,208 +973,213 @@ inline void clear(Color inCol)
 	}
 }
 
-inline void pixel(int32 x, int32 y)
+//blending
+void plotBlendedPixel(int32 x, int32 y, ColorRGBA col)
 {
-	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
-	int32 col = strokeColor.r << 16 | strokeColor.g << 8 | strokeColor.b | 0xff000000;
-	pixelBuffer[y*screenWidth + x] = col;
+	if ((x<0) || (x>windowWidth - 1) || (y<0) || (y>windowHeight - 1)) return;
+	real32 a = col.a / 255.0f; //to get a number between 0.0-1.0
+	real32 sR = (real32)col.r;
+	real32 sG = (real32)col.g;
+	real32 sB = (real32)col.b;
+
+	uint32 tempcol = pixelBuffer[y*windowWidth + x];
+
+	real32 dR = (tempcol >> 16) & 0xff;
+	real32 dG = (tempcol >> 8) & 0xff;
+	real32 dB = (tempcol >> 8) & 0xff;
+
+
+	//linear blend
+	real32 r = (1.0f - a)*dR + a*sR;
+	real32 g = (1.0f - a)*dG + a*sG;
+	real32 b = (1.0f - a)*dB + a*sB;
+
+	pixelBuffer[y*windowWidth + x] = (((uint32)(r + 0.5f) << 16) |
+		((uint32)(g + 0.5f) << 8) |
+		((uint32)(b + 0.5f) << 0));
 }
 
+inline void pixel(int32 x, int32 y)
+{
+	if ((x < 0) || (x > windowWidth - 1) || (y < 0) || (y > windowHeight - 1)) return;
+	//alpha blending on
+	if (strokeColor.a < 255)
+		plotBlendedPixel(x, y, strokeColor);
+	else
+	{
+		int32 col = strokeColor.r << 16 | strokeColor.g << 8 | strokeColor.b | 0xff000000;
+		pixelBuffer[y*windowWidth + x] = col;
+
+	}
+}
 inline void pixel(int32 x, int32 y, uint32 col)
 {
-	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
-	pixelBuffer[y*screenWidth + x] = col;
+	if ((x<0) || (x>windowWidth - 1) || (y<0) || (y>windowHeight - 1)) return;
+	pixelBuffer[y*windowWidth + x] = col;
 }
 
 inline void pixel(int32 x, int32 y, uint8 r, uint8 g, uint8 b)
 {
-	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
+	if ((x<0) || (x>windowWidth - 1) || (y<0) || (y>windowHeight - 1)) return;
 	int32 color = r << 16 | g << 8 | b | 0xff000000;
-	pixelBuffer[y*screenWidth + x] = color;
+	pixelBuffer[y*windowWidth + x] = color;
 }
 
-inline void pixel(int32 x, int32 y, Color col)
+inline void pixel(int32 x, int32 y, ColorRGBA col)
 {
-	if ((x<0) || (x>screenWidth - 1) || (y<0) || (y>screenHeight - 1)) return;
-	int32 c = col.r << 16 | col.g << 8 | col.b | 0xff000000;
-	pixelBuffer[y*screenWidth + x] = c;
+	if ((x<0) || (x>windowWidth - 1) || (y<0) || (y>windowHeight - 1)) return;
+	
+	//alpha blending on
+	if (col.a < 255)
+		plotBlendedPixel(x, y, col);
+	else
+	{
+		int32 c = col.r << 16 | col.g << 8 | col.b | 0xff000000;
+		pixelBuffer[y*windowWidth + x] = c;
+	}
 }
 
-inline void hzLine(int y, int x1, int x2, Color c)
+static void hzLine(int y, int x1, int x2, ColorRGBA c)
 {
 	if (x2 < x1) { x1 += x2; x2 = x1 - x2; x1 -= x2; } //swap x1 and x2
-	if (x2 < 0 || x1 >= screenWidth || y < 0 || y >= screenHeight) return;
+	if (x2 < 0 || x1 >= windowWidth || y < 0 || y >= windowHeight) return;
 	if (x1 < 0) x1 = 0; //clip
-	if (x2 >= screenWidth) x2 = screenWidth - 1; //clip
+	if (x2 >= windowWidth) x2 = windowWidth - 1; //clip
 
-	int col = c.r << 16 | c.g << 8 | c.b | 0xff000000;
-
-	//int thickness{ 0 };
-
-	//for (int i = 0; i < lineWidth; i++)
-	//{
 	for (int x = x1; x <= x2; x++)
 	{
-		pixelBuffer[(y/* + thickness*/)*screenWidth + x] = col;
+		//pixelBuffer[(y/* + thickness*/)*windowWidth + x] = col;
+		pixel(x, y, c);
 	}
-	//thickness++;
-	//}
 }
 
-inline void vtLine(int x, int y1, int y2, Color c)
+static void vtLine(int x, int y1, int y2, ColorRGBA c)
 {
 	if (y2 < y1) { y1 += y2; y2 = y1 - y2; y1 -= y2; } //swap y1 and y2
-	if (y2 < 0 || y1 >= screenHeight || x < 0 || x >= screenWidth) return;
+	if (y2 < 0 || y1 >= windowHeight || x < 0 || x >= windowWidth) return;
 	if (y1 < 0) y1 = 0; //clip
-	if (y2 >= screenWidth) y2 = screenHeight - 1; //clip
+	if (y2 >= windowWidth) y2 = windowHeight - 1; //clip
 
-	int col = c.r << 16 | c.g << 8 | c.b | 0xff000000;
+	//int col = c.r << 16 | c.g << 8 | c.b | 0xff000000;
 	for (int y = y1; y <= y2; y++)
 	{
-		pixelBuffer[y*screenWidth + x] = col;
+		//pixelBuffer[y*windowWidth + x] = col;
+		pixel(x, y, c);
+	}
+}
+
+static void drawFilledRect(int32 startX, int32 startY, ColorRGBA col, int32 width, int32 height)
+{
+	for (int y = 0; y < height; y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+			//pixel(startX + x, startY + y, col);
+			plotBlendedPixel(startX + x, startY + y, col);
+		}
+
 	}
 }
 
 //draws a line with Breshenam's algorithm
-inline void line(int32 x1, int32 y1, int32 x2, int32 y2)
+inline void line(int32 x1, int32 y1, int32 x2, int32 y2/*, ColorRGBA col*/)
 {
+	if (lineWidth <= 0)
+		return;
 
-		bool32 step = abs(x2 - x1) < abs(y2 - y1);
+	bool32 step = abs(x2 - x1) < abs(y2 - y1);
 
-		//rotate the line
+	//rotate the line
+	if (step)
+	{
+		SWAP(x1, y1);
+		SWAP(x2, y2);
+	}
+
+	if (x2 < x1)
+	{
+		SWAP(x1, x2);
+		SWAP(y1, y2);
+	}
+
+	//Bresenhamï¿½s algorithm starts by plotting a pixel at the first coordinate of the line
+	//(x1, y1), and to x+1, it takes the difference of the y component of the line to the
+	//two possible y coordinates, and uses the y coordinate where the error is the smaller,
+	//and repeats this for every pixel.
+	bool32 drawRect = false;
+	if (lineWidth > 1)
+	{
+		drawRect = true;
+	}
+	real32 error = 0.0;
+
+	//line slope
+	real32 slope = (real32)abs(y2 - y1) / (x2 - x1);
+
+	//starting point
+	int32 y = y1;
+
+	int32 ystep = (y2 > y1 ? 1 : -1);
+
+	if (lineWidth > 1)
+	{
+		drawRect = true;
+		//ystep = (y2 > y1 ? lineWidth : -lineWidth);
+	}
+	//int32 xStep = lineWidth;
+	for (int32 i = x1; i < x2; i += 1)
+	{
 		if (step)
 		{
-			SWAP(x1, y1);
-			SWAP(x2, y2);
-		}
+			if (drawRect)
+				drawFilledRect(y, i, strokeColor, lineWidth, lineWidth);
+			else
+				pixel(y, i, strokeColor);
 
-		if (x2 < x1)
-		{
-			SWAP(x1, x2);
-			SWAP(y1, y2);
-		}
-
-		//Bresenham’s algorithm starts by plotting a pixel at the first coordinate of the line
-		//(x1, y1), and to x+1, it takes the difference of the y component of the line to the
-		//two possible y coordinates, and uses the y coordinate where the error is the smaller,
-		//and repeats this for every pixel.
-		int32 templineWidth = 0;
-		//TODO: fix lineWidth
-		//for (int i = 0; i < lineWidth; i++)
-		//{
-			float32 error = 0.0;
-
-			//line slope
-			float32 slope = (float32)abs(y2 - y1) / (x2 - x1);
-
-			//starting point
-			int32 y = y1;
-
-			int32 ystep = (y2 > y1 ? 1 : -1);
-
-			for (int32 i = x1; i < x2; i++)
-			{
-				if (step)
-					pixel(y, i);
-				else
-					pixel(i, y);
-
-				error += slope;
-
-				if (error >= 0.5)
-				{
-					y += ystep;
-					error -= 1.0;
-				}
-			}
-			//templineWidth++;
-		//}
-}
-
-inline void rect(int x, int y, int width, int height)
-{
-	if (fillFlag)
-	{
-		//save values
-		int tempX = x;
-		int tempY = y;
-		int tempW = width;
-		int tempH = height;
-
-		//to prevent that the lineWidth is bigger than the square
-		if (lineWidth >= 1 && lineWidth < (width -lineWidth) && lineWidth < (height - lineWidth))
-		{
-			//draw black lineWidth
-			while (height--)
-			{
-				//draw horizontal line
-				while (width--)
-				{
-					pixel(x, y, strokeColor);
-					x++;
-				}
-
-				//next row
-				width = tempW;
-				x = tempX;
-				y++;
-			}
-
-			x = tempX;
-			y = tempY;
-			width = tempW;
-			height = tempH;
-			x += lineWidth;
-			y += lineWidth;
-			width -= lineWidth*2;
-			height -= lineWidth*2;
-
-			tempX = x;
-			tempW = width;
-
-			while (height--)
-			{
-				//draw horizontal line
-				while (width--)
-				{
-					pixel(x, y, fillColor);
-					x++;
-				}
-
-				//next row
-				width = tempW;
-				x = tempX;
-				y++;
-			}
 		}
 		else
 		{
-			while (height--)
+			if (drawRect)
 			{
-				//draw horizontal line
-				while (width--)
-				{
-					pixel(x, y);
-					x++;
-				}
-
-				//next row
-				width = tempW;
-				x = tempX;
-				y++;
+				drawFilledRect(i, y, strokeColor, lineWidth, lineWidth);
 			}
+			else
+				pixel(i, y, strokeColor);
 		}
-		
+		error += slope;
+
+		if (error >= 0.5)
+		{
+			y += ystep;
+			error -= 1.0;
+		//	i += 1;
+		}
+		//else
+		//	i += 1;
+			
 	}
-	else
+}
+		
+inline void rect(int32 x, int32 y, int32 width, int32 height)
+{
+	//to prevent that the lineWidth is bigger than the square
+	if (lineWidth >= 1 && lineWidth < (width - lineWidth) && lineWidth < (height - lineWidth))
 	{
 		//draw non filled rect
-		line(x, y, x + width, y);
-		line(x, y, x, y + height);
-		line(x, y + height, x + width, y + height);
-		line(x + width, y, x + width, y + height);
+		line(x, y, x + width, y);						//top
+		line(x, y + lineWidth, x, y + height);			//left
+		line(x + lineWidth, y + height - lineWidth, x + width, y + height - lineWidth); //bottom
+		line(x + width - lineWidth, y + lineWidth, x + width - lineWidth, y + height - lineWidth);		//right
+		x += lineWidth;
+		y += lineWidth;
+		width -= lineWidth * 2;
+		height -= lineWidth * 2;
 	}
 
+	if (fillFlag)
+	{
+		drawFilledRect(x, y, fillColor, width, height);
+	}
 }
 
 //Bresenham circle algorithm
@@ -1072,7 +1257,7 @@ inline void circle2(int32 x, int32 y, int32 radius)
 	}
 }
 
-inline void fillCircleData(int xc, int yc, int p, int pb, int pd, int radius, Color col)
+static void fillCircleData(int xc, int yc, int p, int pb, int pd, int radius, ColorRGBA col)
 {
 	int a, b, c, d, e, f, g, h;
 	int x = 0;
@@ -1101,7 +1286,7 @@ inline void fillCircleData(int xc, int yc, int p, int pb, int pd, int radius, Co
 inline void circle(int xc, int yc, int radius)
 {
 	//radius += lineWidth;
-	if (xc + radius < 0 || xc - radius >= screenWidth || yc + radius < 0 || yc - radius >= screenHeight) return;
+	if (xc + radius < 0 || xc - radius >= windowWidth || yc + radius < 0 || yc - radius >= windowHeight) return;
 
 	if (fillFlag)
 	{
@@ -1151,24 +1336,21 @@ inline void circle(int xc, int yc, int radius)
 	}
 }
 
-int32 xOffset = 400;
-int32 yOffset = 200;
-
 void draw2dPolygon(vec2 *inVertices, int32 numVertices)
 {
 
 	for (int i = 0; i < numVertices; i++)
 	{
 	
-		line((int32)(inVertices[i].x + xOffset),						
-			(int32)(-inVertices[i].y + yOffset),						
-			(int32)(inVertices[(i + 1) % numVertices].x + xOffset),		
-			(int32)(-inVertices[(i + 1) % numVertices].y + yOffset));	
+		line((int32)(inVertices[i].x + center.x),						
+			(int32)(-inVertices[i].y + center.y),						
+			(int32)(inVertices[(i + 1) % numVertices].x + center.x),		
+			(int32)(-inVertices[(i + 1) % numVertices].y + center.y));	
 	}
 }
 
 
-void translate2d(vec2 *inVertices, vec2 *outVertices, int32 numVertices, float32 x, float32 y)
+void translate2d(vec2 *inVertices, vec2 *outVertices, int32 numVertices, real32 x, real32 y)
 {
 	for (int32 i = 0; i < numVertices; i++)
 	{
@@ -1177,7 +1359,7 @@ void translate2d(vec2 *inVertices, vec2 *outVertices, int32 numVertices, float32
 	}
 }
 
-void scale2d(vec2 *inVertices, vec2 *outVertices, int32 Total, float32 scale)
+void scale2d(vec2 *inVertices, vec2 *outVertices, int32 Total, real32 scale)
 {
 	for (int32 i = 0; i < Total; i++)
 	{
@@ -1186,7 +1368,7 @@ void scale2d(vec2 *inVertices, vec2 *outVertices, int32 Total, float32 scale)
 	}
 }
 
-void rotateZ2d(vec2 *inVertices, vec2 *outVertices, int32 numVertices, float32 angle)
+void rotateZ2d(vec2 *inVertices, vec2 *outVertices, int32 numVertices, real32 angle)
 {
 	for (int32 i = 0; i < numVertices; i++)
 	{
@@ -1195,7 +1377,7 @@ void rotateZ2d(vec2 *inVertices, vec2 *outVertices, int32 numVertices, float32 a
 	}
 }
 
-void triangle(float32 x1, float32 y1, float32 x2, float32 y2, float32 x3, float32 y3)
+void triangle(real32 x1, real32 y1, real32 x2, real32 y2, real32 x3, real32 y3)
 {
 	vec2 triangleVertices[3] =
 	{
@@ -1220,3 +1402,123 @@ void triangle(float32 x1, float32 y1, float32 x2, float32 y2, float32 x3, float3
 }
 
 #endif
+
+// TODO: linked list
+/* ----- Data Structures ----- */
+struct Entity;
+#include <vector>
+using namespace std;
+struct VecArray
+{
+	vector<Entity*> entity;
+	
+	int32 length = 0;
+	void push(Entity *ent)
+	{
+		//data.push_back(ent);
+		entity.emplace_back(ent);
+		length = entity.size();
+	}
+
+	void splice(int32 start, int32 end)
+	{
+		//if (!data.empty())
+		//{
+			/*for (int32 i = start; i <= end; i++)
+			{
+				delete data[i];
+			}*/
+			delete entity[start];
+			entity.erase(entity.begin() + start, entity.begin() + start + end);
+			length = entity.size();
+		//}
+	}
+	void reserve(int32 val)
+	{
+		entity.reserve(val);
+	}
+	void free()
+	{
+		for (auto &a : entity)
+		{
+			delete a;
+		}
+		//data.shrink_to_fit();
+	}
+};
+
+//dynamic array
+struct Array
+{
+	int32 length;
+	int32 size;
+	void **data;
+
+	void reserve(int32 initSize)
+	{
+		length = 0;
+		size = initSize;
+		data = (void**)malloc(sizeof(void *) * size);
+	}
+
+	void resize(int32 newSize)
+	{
+		printf("Realloc the Array: %d to %d\n", size, newSize);
+
+		void **newArray = (void**)realloc(data, sizeof(void *) * newSize);
+		if (newArray)
+		{
+			data = newArray;
+			size = newSize;
+		}
+	}
+
+	void push(void *value)
+	{
+		if (size == length)
+			resize(size * 2);
+		data[length++] = value;
+	}
+
+	void splice(int32 index)
+	{
+		if (index < 0 || index >= length)
+			return;
+
+		free(data[index]);
+		data[index] = 0;
+
+		for (int i = index; i < length - 1; i++)
+		{
+			data[i] = data[i + 1];
+			data[i + 1] = 0;
+		}
+
+		length--;
+
+		if (length > 0 && length == size / 4)
+			resize(size / 2);
+	}
+
+	void set(int index, void *value)
+	{
+		if (index >= 0 && index < length)
+			data[index] = value;
+	}
+
+	void *get(int index)
+	{
+		if (index >= 0 && index < length)
+			return data[index];
+		return 0;
+	}
+
+	void freeMem()
+	{
+		for (int32 i = 0; i < length; i++) {
+			free(data[i]);
+		}
+		free(data);
+	}
+
+};

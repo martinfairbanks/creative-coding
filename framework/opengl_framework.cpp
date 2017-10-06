@@ -88,10 +88,16 @@ void clear(ColorRGBA col)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void setLineWidth(float32 value)
+void strokeWeight(int32 value)
 {
-	glLineWidth(value);
 	lineWidth = value;
+	glLineWidth((float32)value);
+}
+
+void noStroke()
+{
+	lineWidth = 0;
+	glLineWidth(1);
 }
 
 void stroke(float32 r, float32 g, float32 b, float32 a = 1.f)
@@ -112,45 +118,64 @@ void stroke(ColorRGBA col)
 inline void line(int32 x0, int32 y0, int32 x1, int32 y1)
 {
 	glBegin(GL_LINES);
-	glVertex2f(x0, y0);
-	glVertex2f(x1, y1);
+	glVertex2i(x0, y0);
+	glVertex2i(x1, y1);
 	glEnd();
 }
 
 inline void pixel(int32 x, int32 y)
 {
 	glBegin(GL_POINTS);
-	glVertex2f(x, y);
+	glVertex2i(x, y);
 	glEnd();
 }
 
-inline void rect(int x, int y, int width, int height)
+inline void rect(int32 x, int32 y, int32 width, int32 height)
 {
 	//glRectf(50.0f, 50.0f, 25.0f, 25.0f);
 	if (fillFlag)
 	{
 		glColor4f(fillColor.r, fillColor.g, fillColor.b, fillColor.a);
 		glBegin(GL_QUADS);
-		glVertex2f(x, y);
-		glVertex2f(x + width, y);
-		glVertex2f(x + width, y + height);
-		glVertex2f(x, y + height);
+		glVertex2i(x, y);
+		glVertex2i(x + width, y);
+		glVertex2i(x + width, y + height);
+		glVertex2i(x, y + height);
 		glEnd();
 		glColor4f(strokeColor.r, strokeColor.g, strokeColor.b, strokeColor.a);
-		glBegin(GL_LINE_LOOP);
-		glVertex2f(x, y);
-		glVertex2f(x + width, y);
-		glVertex2f(x + width, y + height);
-		glVertex2f(x, y + height);
-		glEnd();
 	}
-	else
+	
+	if (lineWidth > 0)
 	{
 		glBegin(GL_LINE_LOOP);
-		glVertex2f(x, y);
-		glVertex2f(x + width, y);
-		glVertex2f(x + width, y + height);
-		glVertex2f(x, y + height);
+		glVertex2i(x, y);
+		glVertex2i(x + width, y);
+		glVertex2i(x + width, y + height);
+		glVertex2i(x, y + height);
+		glEnd();
+	}
+}
+
+void quad(int32 x1, int32 y1, int32 x2, int32 y2, int32 x3, int32 y3, int32 x4, int32 y4)
+{
+	if (fillFlag)
+	{
+		glColor4f(fillColor.r, fillColor.g, fillColor.b, fillColor.a);
+		glBegin(GL_QUADS);
+		glVertex2f(x1, y1);
+		glVertex2f(x2, y2);
+		glVertex2f(x3, y3);
+		glVertex2f(x4, y4);
+		glEnd();
+		glColor4f(strokeColor.r, strokeColor.g, strokeColor.b, strokeColor.a);
+	}
+	if (lineWidth > 0)
+	{
+		glBegin(GL_LINE_LOOP);
+		glVertex2f(x1, y1);
+		glVertex2f(x2, y2);
+		glVertex2f(x3, y3);
+		glVertex2f(x4, y4);
 		glEnd();
 	}
 }
@@ -161,27 +186,21 @@ inline void circle(int32 x, int32 y, int32 radius)
 	{
 		glColor4f(fillColor.r, fillColor.g, fillColor.b, fillColor.a);
 		glBegin(GL_TRIANGLE_FAN);
-		glVertex2f(x, y);
-		for (int angle = 0; angle < 360; angle++)
+		glVertex2i(x, y);
+		for (float32 angle = 0; angle < 360; angle++)
 		{
-			glVertex2f(x + sin(angle) * radius, y + cos(angle) * radius);
+			glVertex2f((float32)x + sin(angle) * radius, (float32)y + cos(angle) * (float32)radius);
 		}
 		glEnd();
 		glColor4f(strokeColor.r, strokeColor.g, strokeColor.b, strokeColor.a);
-		glBegin(GL_LINE_STRIP);
-		for (float angle = 0; angle < PI32 * 4; angle += (PI32 / 50.0f))
-		{
-			glVertex2f(x + sin(angle) * radius, y + cos(angle) * radius);
-		}
-		glEnd();
-
 	}
-	else
+
+	if (lineWidth > 0)
 	{
 		glBegin(GL_LINE_STRIP);
 		for (float angle = 0; angle < PI32*4; angle += (PI32 / 50.0f))
 		{
-			glVertex2f(x + sin(angle) * radius, y + cos(angle) * radius);
+			glVertex2f((float32)x + sin(angle) * (float32)radius, (float32)y + cos(angle) * (float32)radius);
 		}
 		glEnd();
 	}
@@ -193,26 +212,21 @@ inline void ellipse(int32 x, int32 y, int32 r1, int32 r2)
 	{
 		glColor4f(fillColor.r, fillColor.g, fillColor.b, fillColor.a);
 		glBegin(GL_TRIANGLE_FAN);
-		glVertex2f(x, y);
+		glVertex2i(x, y);
 		for (int angle = 0; angle < 360; angle++)
 		{
-			glVertex2f(x + sin(angle) * r1, y + cos(angle) * r2);
+			glVertex2f(float32(x + sin(angle) * r1), float32(y + cos(angle) * r2));
 		}
 		glEnd();
 		glColor4f(strokeColor.r, strokeColor.g, strokeColor.b, strokeColor.a);
-		glBegin(GL_LINE_STRIP);
-		for (float angle = 0; angle < PI32 * 4; angle += (PI32 / 50.0f))
-		{
-			glVertex2f(x + sin(angle) * r1, y + cos(angle) * r2);
-		}
-		glEnd();
 	}
-	else
+
+	if (lineWidth > 0)
 	{
 		glBegin(GL_LINE_STRIP);
 		for (float angle = 0; angle < PI32 * 4; angle += (PI32 / 50.0f))
 		{
-			glVertex2f(x + sin(angle) * r1, y + cos(angle) * r2);
+			glVertex2f((float32)x + sin(angle) * (float32)r1, (float32)y + cos(angle) * (float32)r2);
 		}
 		glEnd();
 	}
@@ -262,16 +276,17 @@ void plane(float32 width, float32 height)
 	glEnd();
 }
 
-void sphere(GLfloat fRadius, GLint iSlices, GLint iStacks)
+void sphere(GLfloat radius, GLint slices = 24, GLint stacks = 16)
 {
-	GLfloat drho = (GLfloat)(3.141592653589) / (GLfloat)iStacks;
-	GLfloat dtheta = 2.0f * (GLfloat)(3.141592653589) / (GLfloat)iSlices;
-	GLfloat ds = 1.0f / (GLfloat)iSlices;
-	GLfloat dt = 1.0f / (GLfloat)iStacks;
+#if 1
+	GLfloat drho = PI32 / (GLfloat)stacks;
+	GLfloat dtheta = 2.0f * PI32 / (GLfloat)slices;
+	GLfloat ds = 1.0f / (GLfloat)slices;
+	GLfloat dt = 1.0f / (GLfloat)stacks;
 	GLfloat t = 1.0f;
 	GLfloat s = 0.0f;
 
-	for (int32 i = 0; i < iStacks; i++)
+	for (int32 i = 0; i < stacks; i++)
 	{
 		GLfloat rho = (GLfloat)i * drho;
 		GLfloat srho = (GLfloat)(sin(rho));
@@ -281,9 +296,9 @@ void sphere(GLfloat fRadius, GLint iSlices, GLint iStacks)
 
 		glBegin(GL_TRIANGLE_STRIP);
 		s = 0.0f;
-		for (int32 j = 0; j <= iSlices; j++)
+		for (int32 j = 0; j <= slices; j++)
 		{
-			GLfloat theta = (j == iSlices) ? 0.0f : j * dtheta;
+			GLfloat theta = (j == slices) ? 0.0f : j * dtheta;
 			GLfloat stheta = (GLfloat)(-sin(theta));
 			GLfloat ctheta = (GLfloat)(cos(theta));
 
@@ -293,7 +308,7 @@ void sphere(GLfloat fRadius, GLint iSlices, GLint iStacks)
 
 			glTexCoord2f(s, t);
 			glNormal3f(x, y, z);
-			glVertex3f(x * fRadius, y * fRadius, z * fRadius);
+			glVertex3f(x * radius, y * radius, z * radius);
 
 			x = stheta * srhodrho;
 			y = ctheta * srhodrho;
@@ -301,16 +316,25 @@ void sphere(GLfloat fRadius, GLint iSlices, GLint iStacks)
 			glTexCoord2f(s, t - dt);
 			s += ds;
 			glNormal3f(x, y, z);
-			glVertex3f(x * fRadius, y * fRadius, z * fRadius);
+			glVertex3f(x * radius, y * radius, z * radius);
 		}
 		glEnd();
 
 		t -= dt;
 	}
+#else
+	GLUquadric *q = gluNewQuadric();
+	gluSphere(q, radius, slices, stacks);
+	gluDeleteQuadric(q);
+#endif
+
 }
 
-void torus(GLfloat majorRadius, GLfloat minorRadius, GLint numMajor, GLint numMinor)
+void torus(GLfloat majorRadius, GLfloat minorRadius)
 {
+	GLint numMajor = 61;
+	GLint numMinor = 37;
+
 	vec3 normal;
 	GLfloat vNormal[3];
 	double majorStep = 2.0f*PI32 / numMajor;
@@ -354,6 +378,40 @@ void torus(GLfloat majorRadius, GLfloat minorRadius, GLint numMajor, GLint numMi
 		}
 		glEnd();
 	}
+}
+void cylinder(GLfloat width, GLfloat height)
+{
+	GLUquadricObj *q = gluNewQuadric();
+	gluCylinder(q, width, width, height, 32, 7);
+	/*glBegin(GL_TRIANGLE_FAN);
+	for (float32 angle = 0; angle < 360; angle++)
+	{
+		glVertex2f(sin(angle) * width, cos(angle) * width);
+	}
+	glEnd();
+	translate(0.0f, height*2, 0.0f);
+	glBegin(GL_TRIANGLE_FAN);
+	for (float32 angle = 0; angle < 360; angle++)
+	{
+		glVertex2f(sin(angle) * width, cos(angle) * width);
+	}
+	glEnd();*/
+	gluDeleteQuadric(q);
+}
+
+void cone(GLfloat width, GLfloat height)
+{
+	GLUquadricObj *q = gluNewQuadric();
+	gluCylinder(q, width, 0, height, 32, 7);
+
+	glBegin(GL_TRIANGLE_FAN);
+	for (float32 angle = 0; angle < 360; angle++)
+	{
+		glVertex2f(sin(angle) * width, cos(angle) * width);
+	}
+	glEnd();
+
+	gluDeleteQuadric(q);
 }
 
 void cube(float32 size)
@@ -489,8 +547,8 @@ void set3dProjection()
 		500.0f);										//far z clipping coordinate
 														//1.0f - 500.0f is the start and end point for how deep we can draw into the screen
 
-														//switch to GL_MODELVIEW, tells OGL that all future transformations will affect what we draw
-														//reset the modelview matrix, wich is where the object information is stored, sets x,y,z to zero
+	//switch to GL_MODELVIEW, tells OGL that all future transformations will affect what we draw
+	//reset the modelview matrix, wich is where the object information is stored, sets x,y,z to zero
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
@@ -498,6 +556,175 @@ void set3dProjection()
 	glEnable(GL_DEPTH_TEST);
 
 	translate(0.0f, 0.0f, -5.0f);
+}
+
+//needed for the normal vectors
+struct Face
+{
+	int facenum;	//id for the faces from the obj file
+	bool quad;		//is it a quad?
+	int faces[4];
+
+	//triangle
+	Face(int facen, int f1, int f2, int f3) : facenum(facen)
+	{
+		faces[0] = f1;
+		faces[1] = f2;
+		faces[2] = f3;
+		quad = false;
+	}
+	//quad
+	Face(int facen, int f1, int f2, int f3, int f4) : facenum(facen)
+	{
+		faces[0] = f1;
+		faces[1] = f2;
+		faces[2] = f3;
+		faces[3] = f4;
+		quad = true;
+	}
+};
+
+void enableFog(float32 start, float32 end, float32 red, float32 green, float32 blue, float32 alpha)
+{
+	//fog setup
+	glEnable(GL_FOG);
+	glFogi(GL_FOG_MODE, /*GL_EXP2*/GL_LINEAR);		//fog equation
+													//glFogf(GL_FOG_DENSITY, 0.6f); //funkar bara om GL_FOG_MODE == GL_EXP eller GL_EXP2
+													//Note that GL_FOG_START and GL_FOG_END only have an effect on GL_LINEAR fog
+													//where the fog starts and ends
+	glFogf(GL_FOG_START, start);
+	glFogf(GL_FOG_END, end);
+	float32 color[] = { red, green, blue, alpha };
+	glFogfv(GL_FOG_COLOR, color);
+}
+
+void disableFog()
+{
+	glDisable(GL_FOG);
+}
+
+#include <vector>
+
+char* moveToNextLine(char *cont)
+{
+	while (*cont != '\n')
+	{
+		cont++;
+	}
+	//move past \n
+	cont++;
+	return cont;
+}
+
+int loadModel(const char *filename)
+{
+	std::vector<vec3*> vertex;
+	std::vector<Face*> faces;
+	std::vector<vec3*> normals;
+
+	char *contents = loadFile(filename);
+	char *contentsAddress = contents;
+
+	while (*contents != '\0')
+	{
+		if (*contents == 'v' && *(1 + contents) == ' ')
+		{
+			float tmpx, tmpy, tmpz;
+			sscanf(contents, "v %f %f %f", &tmpx, &tmpy, &tmpz);
+			vertex.push_back(new vec3(tmpx, tmpy, tmpz));
+		}
+
+		//parse the normals
+		else if (*contents == 'v' && *(1+contents) == 'n')
+		{
+			float tmpx, tmpy, tmpz;
+			sscanf(contents, "vn %f %f %f", &tmpx, &tmpy, &tmpz);
+			normals.push_back(new vec3(tmpx, tmpy, tmpz));
+		}
+		
+		//parse the faces, wich points that makes a face
+		else if (*contents == 'f')
+		{
+			int id;
+			int a, b, c, d;
+			int spaceCount = 0;
+
+			//check if we have quads or triangles
+			char *temp = contents;
+			while (*temp != '\n')
+			{
+				if (*temp == ' ')
+					spaceCount++;
+				temp++;
+			}
+
+			//check for quads
+			if (spaceCount == 4)
+			{
+				sscanf(contents, "f %d//%d %d//%d %d//%d %d//%d", &a, &id, &b, &id, &c, &id, &d, &id);
+				faces.push_back(new Face(id, a, b, c, d));
+			}
+			//triangles
+			else
+			{
+				sscanf(contents, "f %d//%d %d//%d %d//%d", &a, &id, &b, &id, &c, &id);
+				faces.push_back(new Face(id, a, b, c));
+			}
+		}
+		contents = moveToNextLine(contents);
+	}
+	
+	//draw
+
+	//generate a display list
+	int num = glGenLists(1);
+
+	glNewList(num, GL_COMPILE);
+	for (int i = 0; i < faces.size(); i++)
+	{
+		//quads?
+		if (faces[i]->quad)
+		{
+			glBegin(GL_QUADS);
+			glNormal3f(normals[faces[i]->facenum - 1]->x, normals[faces[i]->facenum - 1]->y, normals[faces[i]->facenum - 1]->z); //-1 because C index from 0
+			glVertex3f(vertex[faces[i]->faces[0] - 1]->x, vertex[faces[i]->faces[0] - 1]->y, vertex[faces[i]->faces[0] - 1]->z);
+			glVertex3f(vertex[faces[i]->faces[1] - 1]->x, vertex[faces[i]->faces[1] - 1]->y, vertex[faces[i]->faces[1] - 1]->z);
+			glVertex3f(vertex[faces[i]->faces[2] - 1]->x, vertex[faces[i]->faces[2] - 1]->y, vertex[faces[i]->faces[2] - 1]->z);
+			glVertex3f(vertex[faces[i]->faces[3] - 1]->x, vertex[faces[i]->faces[3] - 1]->y, vertex[faces[i]->faces[3] - 1]->z);
+			glEnd();
+		}
+		else
+		{
+			glBegin(GL_TRIANGLES);
+			glNormal3f(normals[faces[i]->facenum - 1]->x, normals[faces[i]->facenum - 1]->y, normals[faces[i]->facenum - 1]->z); //-1 because C index from 0
+			glVertex3f(vertex[faces[i]->faces[0] - 1]->x, vertex[faces[i]->faces[0] - 1]->y, vertex[faces[i]->faces[0] - 1]->z);
+			glVertex3f(vertex[faces[i]->faces[1] - 1]->x, vertex[faces[i]->faces[1] - 1]->y, vertex[faces[i]->faces[1] - 1]->z);
+			glVertex3f(vertex[faces[i]->faces[2] - 1]->x, vertex[faces[i]->faces[2] - 1]->y, vertex[faces[i]->faces[2] - 1]->z);
+			glEnd();
+		}
+	}
+	glEndList();
+
+	//cleanup
+	for (int i = 0; i < faces.size(); i++)
+		delete faces[i];
+	for (int i = 0; i < normals.size(); i++)
+		delete normals[i];
+	for (int i = 0; i < vertex.size(); i++)
+		delete vertex[i];
+
+	//(NOTE):rewind to the beginning, can't free memory otherwise! don't know why!
+	contents = contentsAddress;
+	free(contents);
+
+	return num;
+
+}
+
+
+void model(int object)
+{
+	glCallList(object);
 }
 
 unsigned int loadTexture(const char *filename)
@@ -521,10 +748,17 @@ unsigned int loadTexture(const char *filename)
 	return id;
 }
 
-void sprite(uint32 tex, float32 x, float32 y, float32 w, float32 h)
+void sprite(uint32 tex, int32 x, int32 y, int32 w, int32 h)
 {
+	//check if wireframe rendering is turned on
+	if (fillFlag == false)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	glEnable(GL_TEXTURE_2D);
+	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+
 	glLoadIdentity();
-	glTranslatef(x, y, 0.0);
+	glTranslatef((float32)x, (float32)y, 0.0f);
 
 	glBindTexture(GL_TEXTURE_2D, tex);
 
@@ -533,12 +767,22 @@ void sprite(uint32 tex, float32 x, float32 y, float32 w, float32 h)
 		glTexCoord2f(0.0f, 0.0f);
 		glVertex2f(0.0f, 0.0f);
 		glTexCoord2f(1.0f, 0.0f);
-		glVertex2f(w, 0.0f);
+		glVertex2f((float32)w, 0.0f);
 		glTexCoord2f(1.0f, 1.0f);
-		glVertex2f(w, h);
+		glVertex2f((float32)w, (float32)h);
 		glTexCoord2f(0.0f, 1.0f);
-		glVertex2f(0.0f, h);
+		glVertex2f(0.0f, (float32)h);
 	glEnd();
+
+	glDisable(GL_TEXTURE_2D);
+	glLoadIdentity();
+
+	//change back the stroke color to the current selected
+	glColor4f(strokeColor.r, strokeColor.g, strokeColor.b, strokeColor.a);
+
+	//turn on noFill again
+	if (fillFlag == false)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 }
 
 void screen(int width, int height, bool screen, char *title)
@@ -696,10 +940,37 @@ int main(int argc, char** argv)
 		keystates = SDL_GetKeyboardState(NULL);
 		SDL_GetMouseState(&mouseX, &mouseY);
 
+		mouseReleased = false;
 		for (int i = 1; i <= 3; i++)
 		{
 			mouseButton[i] = SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(i);
+
+			if (mouseIsPressed && mouseButton[i])
+			{
+				mouseReleased = false;
+			}
+			else if (mouseIsPressed && !mouseButton[1] && !mouseButton[2] && !mouseButton[3])
+			{
+				mouseReleased = true;
+			}
+
+
 		}
+
+		mouseIsPressed = false;
+		for (int i = 1; i <= 3; i++)
+		{
+			mouseButton[i] = SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(i);
+			if (mouseButton[i])
+			{
+				//mouseClick = true;
+				mouseIsPressed = true;
+			}
+		}
+		if (mouseIsPressed && (mouseX != prevMouseX || mouseX != prevMouseX))
+			mouseDragged = true;
+		else
+			mouseDragged = false;
 
 		/* the time it takes to draw one frame */
 		uint32 frameTime = SDL_GetTicks() - frameStart;

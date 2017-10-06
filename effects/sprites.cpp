@@ -4,7 +4,7 @@
 
 	Sprite myTexture;
 	Sprite mySprite;
-	float32 xAngle = 0;
+	real32 xAngle = 0;
 
 	uint8 enemy[11 * 8] =
 	{
@@ -45,7 +45,7 @@ void updateAndDraw(uint32 t)
 	mySprite.setColor(0, 255, 0);
 
 	/* rotate image */
-	myTexture.drawEx((screenWidth - myTexture.width) / 2, (screenHeight - myTexture.width) / 2, NULL, xAngle, NULL);
+	myTexture.drawEx((windowWidth - myTexture.width) / 2, (windowHeight - myTexture.width) / 2, NULL, xAngle, NULL);
 
 	/* animate */
 	int currentFrame = int(((SDL_GetTicks() / 100) % 6));

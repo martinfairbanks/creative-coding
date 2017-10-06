@@ -10,19 +10,19 @@ void setup()
 void updateAndDraw(uint32 t)
 {
 	clear(teal);
-	setColor(green);
+	stroke(green);
 	//pixel(400, 100);
 	//pixel(401, 100);
 	//pixel(400, 101);
 	//pixel(401, 101);
-	setColor(red);
+	stroke(red);
 	line(0, 0, 400, 400);
 	fill();
 	circle(200, 200, 40);
 	noFill();
-	setColor(yellow);
+	stroke(yellow);
 	rect(400, 400, 50, 50);
-	setColor(magenta);
+	stroke(magenta);
 	circle(400, 400, 60);
 	uploadPixels();
 

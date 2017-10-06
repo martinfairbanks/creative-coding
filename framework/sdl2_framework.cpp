@@ -7,12 +7,14 @@
 	#pragma comment(lib, "SDL2main.lib")
 	#pragma comment(lib, "SDL2_ttf.lib")
 	#pragma comment(lib, "SDL2_image.lib")
+	#pragma comment(lib, "SDL2_mixer.lib")
 	//#pragma comment(lib, "SOIL.lib")
 
 	/* Includes */
 	#include <SDL2/SDL.h>
 	#include <SDL2/SDL_ttf.h>
 	#include <SDL2/SDL_image.h>
+	#include <SDL2/SDL_mixer.h>
 	#include <sstream>	//sprintf
 	#include <map>		//for keyPressed
 	//#include <SOIL.h>
@@ -66,90 +68,16 @@
 		0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0
 	};
 
-
-	struct Color
+	struct ColorRGBA
 	{
 		int32 r;
 		int32 g;
 		int32 b;
-		Color() {};
-		Color(int32 red, int32 green, int32 blue) { r = red; g = green; b = blue; }
-	} color{ 0xff,0xff,0xff };
+		int32 a;
+	} colorRGBA{ 0xff, 0xff, 0xff, 0xff };
 
-	Color black{ 0,0,0 };
-	Color white{ 255,255,255 };
-	Color c64red{ 104, 55, 43 };
-	Color c64cyan{ 112, 164, 178 };
-	Color c64purple{ 111, 61, 134 };
-	Color c64green{ 88, 141, 67 };
-	Color c64blue{ 53, 40, 121 };
-	Color c64yellow{ 184, 199, 111 };
-	Color c64orange{ 111, 79, 37 };
-	Color c64brown{ 67, 57, 0 };
-	Color c64lightred{ 154, 103, 89 };
-	Color c64darkgrey{ 68, 68, 68 };
-	Color c64grey{ 108, 108, 108 };
-	Color c64lightgreen{ 154, 210, 132 };
-	Color c64lightblue{ 108, 94, 181 };
-	Color c64lightgrey{ 149, 149, 149 };
-	Color red{ 255,0,0 };
-	Color green{ 0,255,0 };
-	Color blue{ 0,0,255 };
-	Color yellow{ 255,255,0 };
-	Color cyan{ 0,255,255 };
-	Color magenta{ 255,0,255 };
-	Color purple{ 128, 0, 128 };
-	Color gray{ 128, 128, 128 };
-	Color grey{ 192, 192, 192 };
-	Color maroon{ 128, 0, 0 };
-	Color darkgreen{ 0, 128, 0 };
-	Color navy{ 0, 0, 128 };
-	Color teal{ 0, 128, 128 };
-	Color olive{ 128, 128, 0 };
-	Color orange{ 255,127,50 };
-	Color cornflowerblue{ 101, 156, 239 };
-	Color azure{ 0, 127, 255 };
-	Color turquoise{ 48, 213, 200 };
-	Color gold{ 255, 215, 0 };
-	Color silver{ 192, 192, 192 };
-	Color pink{ 255, 192, 203 };
-
-	enum ColorModes
-	{
-		RGB,
-		HSB,
-		HSL
-	};
-	
-	int32 colorModeFlag = RGB;
-
-	Color strokeColor{ 255, 255, 255 };
-	Color fillColor{ 255, 255, 255 };
-
-	void colorMode(int32 mode)
-	{
-		switch (mode)
-		{
-		case RGB:
-			colorModeFlag = RGB;
-			break;
-		case HSB:
-			colorModeFlag = HSB;
-			break;
-		case HSL:
-			colorModeFlag = HSL;
-			break;
-		}
-	}
-	inline void fill()
-	{
-		fillFlag = true;
-	}
-
-	inline void noFill()
-	{
-		fillFlag = false;
-	}
+	ColorRGBA strokeColor{ 255, 255, 255, 255 };
+	ColorRGBA fillColor{ 255, 255, 255, 255 };
 
 bool keyDown(int32 key)
 {
@@ -178,6 +106,16 @@ bool keyPressed(int32 key)
 }
 
 /* SDL drawing functions */
+inline void fill()
+{
+	fillFlag = true;
+}
+
+inline void noFill()
+{
+	fillFlag = false;
+}
+
 inline void clear_(Color col)
 {
 	SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, 255);
@@ -272,7 +210,7 @@ inline void fillCircleData_(int xc, int yc, int p, int pb, int pd, int radius, C
 
 inline void circle_(int xc, int yc, int radius)
 {
-	if (xc + radius < 0 || xc - radius >= screenWidth || yc + radius < 0 || yc - radius >= screenHeight) return;
+	if (xc + radius < 0 || xc - radius >= windowWidth || yc + radius < 0 || yc - radius >= windowHeight) return;
 
 	if (fillFlag)
 	{
@@ -324,12 +262,12 @@ inline void circle_(int xc, int yc, int radius)
 
 inline void softSprite(uint8 *spriteData, int32 x, int32 y, int32 width, int32 height, Color col = color)
 {
-	if ((x<0) || (x>screenWidth - 16) || (y<0) || (y>screenHeight - 16)) return;
+	if ((x<0) || (x>windowWidth - 16) || (y<0) || (y>windowHeight - 16)) return;
 	int32 c = col.r << 16 | col.g << 8 | col.b | 0xff000000;
 	//uint8 *sprite = spriteMap[id];
 
 	int32 index=0;
-	int32 yOffset = y * screenWidth + x;
+	int32 yOffset = y * windowWidth + x;
 	for (int32 i = 0; i < height; i++)
 	{
 		for (int32 j = 0; j < width; j++)
@@ -339,7 +277,7 @@ inline void softSprite(uint8 *spriteData, int32 x, int32 y, int32 width, int32 h
 				((uint32*)pixelBuffer)[yOffset + j] = c;
 			}
 		}
-		yOffset += screenWidth;
+		yOffset += windowWidth;
 	}
 }
 
@@ -357,17 +295,75 @@ SDL_Texture* loadTexture(char filename[])
 	return tex;
 }
 
+
 struct Sprite
 {
-	int32 xPos = 0;
-	int32 yPos = 0;
 	int32 width = 0;				//image dimensions
 	int32 height = 0;
 	int32 frameWidth = 0;			//frame dimensions in spritesheet
 	int32 frameHeight = 0;
 	SDL_Texture *texture = 0;		//pointer to the texture image
-	
-	bool Sprite::loadTexture(char filename[])
+	real32 spriteScale = 1.0f;
+
+	int32 frameTime;
+	int32 numFrames = 0;
+	int32 currentFrame = 0;
+	int32 timeToUpdate = 0;
+	bool32 animationDone = false;
+	SDL_Rect sourceRect;
+	vec2 origin{ 0, 0 };
+
+	void setOrigin(int32 x, int32 y)
+	{
+		origin.x = x;
+		origin.y = y;
+	}
+
+	void update(float elapsedTime)
+	{
+		timeToUpdate += elapsedTime;
+		if (timeToUpdate > frameTime)
+		{
+			currentFrame++;
+			timeToUpdate = 0;
+			animationDone = false;
+			if (currentFrame < numFrames)
+			{
+				sourceRect.x += frameWidth;
+			}
+			else
+			{
+				sourceRect.x -= frameWidth * (numFrames - 1);
+				currentFrame = 0;
+				animationDone = true;
+			}
+		}
+	}
+
+	void drawAnimation(int x, int y, real32 angle = 0.0f, SDL_RendererFlip flip = SDL_FLIP_NONE)
+	{
+		SDL_Rect dstRect;
+		dstRect.x = x;
+		dstRect.y = y;
+		dstRect.w = sourceRect.w * spriteScale;
+		dstRect.h = sourceRect.h * spriteScale;
+
+		SDL_RenderCopyEx(renderer, texture, &sourceRect, &dstRect, angle, NULL, flip);
+
+	}
+	void drawAnimation(int x, int y, SDL_Rect sourceRect, real32 angle = 0.0f, SDL_RendererFlip flip = SDL_FLIP_NONE)
+	{
+		SDL_Rect dstRect;
+		dstRect.x = x-origin.x;
+		dstRect.y = y - origin.y;
+		dstRect.w = sourceRect.w * spriteScale;
+		dstRect.h = sourceRect.h * spriteScale;
+
+		SDL_RenderCopyEx(renderer, texture, &sourceRect, &dstRect, angle, NULL, flip);
+
+	}
+
+	bool loadTexture(char filename[])
 	{
 		texture = IMG_LoadTexture(renderer, filename);
 
@@ -385,7 +381,38 @@ struct Sprite
 		return true;
 	}
 
-	bool Sprite::load(char fileName[], int32 w, int32 h)
+	bool loadTextureSpriteSheet(char *filename, int sourceX, int sourceY,
+		int w, int h, int fps, int num_frames)
+	{
+
+		frameTime = fps;
+		numFrames = num_frames;
+
+		//mySprite.loadTextureSpriteSheet("data/cavestory/MyChar.png", 0, 0, 16, 16, x, y, 100)
+		texture = IMG_LoadTexture(renderer, filename);
+
+		frameWidth = w;
+		frameHeight = h;
+		sourceRect.x = sourceX;
+		sourceRect.y = sourceY;
+		sourceRect.w = w;
+		sourceRect.h = h;
+
+		if (texture == NULL)
+		{
+			LOG(IMG_GetError());
+			return false;
+		}
+		else
+		{
+			//query texture to get it's width and height
+			SDL_QueryTexture(texture, NULL, NULL, &width, &height);
+		}
+
+		return true;
+	}
+
+	bool load(char fileName[], int32 w, int32 h)
 	{
 		if (loadTexture(fileName))
 		{
@@ -395,26 +422,26 @@ struct Sprite
 		}
 		return false;
 	}
-	void Sprite::setColor(Uint8 red, Uint8 green, Uint8 blue)
+	void setColor(Uint8 red, Uint8 green, Uint8 blue)
 	{
 		//modulate texture rgb
 		int32 test = SDL_SetTextureColorMod(texture, red, green, blue);
 	}
 
-	void Sprite::setBlendMode(SDL_BlendMode blending)
+	void setBlendMode(SDL_BlendMode blending)
 	{
 		//set blending function
 		SDL_SetTextureBlendMode(texture, blending);
 	}
 
-	void Sprite::setAlpha(Uint8 alpha)
+	void setAlpha(Uint8 alpha)
 	{
 		//modulate texture alpha
 		SDL_SetTextureAlphaMod(texture, alpha);
 	}
 
 	//draw texture at position x, y, with width and height
-	void Sprite::draw(int32 x, int32 y, int32 w, int32 h)
+	void draw(int32 x, int32 y, int32 w, int32 h)
 	{
 		//set draw area
 		SDL_Rect dstRect = { x, y, w, h };
@@ -423,29 +450,29 @@ struct Sprite
 	}
 
 	//draw texture at position x, y preserving width and height
-	void Sprite::draw(int32 x, int32 y)
+	void draw(int32 x, int32 y)
 	{
 		draw(x, y, width, height);
 	}
 
-	//draw a frame from spritesheet at position x, y
-	void Sprite::draw(int32 x, int32 y, int32 frame)
+	//draw a frame from spritesheet at pixel position x, y
+	void draw(int32 x, int32 y, int32 frame, real32 angle = 0.0f, SDL_RendererFlip flip = SDL_FLIP_NONE)
 	{
-		SDL_Rect dstRect = { x, y, frameWidth, frameHeight };
+		SDL_Rect dstRect = { x, y, frameWidth*spriteScale, frameHeight*spriteScale };
 		int32 columns = width / frameWidth;
 
 		SDL_Rect srcRect = { (frame%columns)*frameWidth, (frame / columns)*frameHeight,
-							 frameWidth, frameHeight };
+			frameWidth, frameHeight };
 
-		SDL_RenderCopy(renderer, texture, &srcRect, &dstRect);
+		SDL_RenderCopyEx(renderer, texture, &srcRect, &dstRect, angle, NULL, flip);
 	}
 
 	/*	draw texture at position x, y, with width and height
-		angle -> an angle in degrees that indicates the rotation that will be applied to the destination
-		flip -> flip value stating which flipping actions should be performed on the texture
-				SDL_FLIP_NONE, SDL_FLIP_HORIZONTAL, SDL_FLIP_VERTICAL
+	angle -> an angle in degrees that indicates the rotation that will be applied to the destination
+	flip -> flip value stating which flipping actions should be performed on the texture
+	SDL_FLIP_NONE, SDL_FLIP_HORIZONTAL, SDL_FLIP_VERTICAL
 	*/
-	void Sprite::draw(int32 x, int32 y, int32 w, int32 h, float64 angle, SDL_RendererFlip flip)
+	void draw(int32 x, int32 y, int32 w, int32 h, real64 angle, SDL_RendererFlip flip)
 	{
 		//set draw area
 		SDL_Rect dstRect = { x ,y , w, h };
@@ -454,11 +481,10 @@ struct Sprite
 	}
 
 	/*	frame ->	source rect in spritesheet or NULL for the entire texture
-		center ->	a point indicating the point around which dstRect will be rotated 
-					if NULL, rotation will be done aroud dstrect.w / 2, dstrect.h / 2
-	
+	center ->	a point indicating the point around which dstRect will be rotated
+	if NULL, rotation will be done aroud dstrect.w / 2, dstrect.h / 2
 	*/
-	void Sprite::drawEx(int32 x, int32 y, SDL_Rect* frame = NULL, float64 angle = 0.0f, SDL_Point* center = NULL, SDL_RendererFlip flip = SDL_FLIP_NONE)
+	void drawEx(int32 x, int32 y, SDL_Rect* frame = NULL, real64 angle = 0.0f, SDL_Point* center = NULL, SDL_RendererFlip flip = SDL_FLIP_NONE)
 	{
 		//set draw area
 		SDL_Rect dstRect = { x, y, width, height };
@@ -474,7 +500,7 @@ struct Sprite
 		SDL_RenderCopyEx(renderer, texture, frame, &dstRect, angle, center, flip);
 	}
 
-	void Sprite::clean()
+	void clean()
 	{
 		//free texture
 		if (texture != NULL)
@@ -487,7 +513,7 @@ struct Sprite
 
 inline void uploadPixels()
 {
-	SDL_UpdateTexture(backbufferTexture, NULL, pixelBuffer, screenWidth * sizeof(uint32));
+	SDL_UpdateTexture(backbufferTexture, NULL, pixelBuffer, windowWidth * sizeof(uint32));
 	SDL_RenderCopy(renderer, backbufferTexture, NULL, NULL);
 	//SDL_RenderPresent(renderer);
 };
@@ -526,6 +552,50 @@ void print(const char *message, int x, int y, int32 fontSize = 12)
 	SDL_DestroyTexture(texture);
 }
 
+/* Sound */
+Mix_Music* loadPlayMusic(Mix_Music *music, char *filename)
+{
+	music = Mix_LoadMUS(filename);
+	//pointer to Mix_Music to play, loop (-1 = infinite)
+	Mix_PlayMusic(music, -1);
+	Mix_VolumeMusic(30);
+	return music;
+}
+
+Mix_Chunk* loadSound(char *filename)
+{
+	return Mix_LoadWAV(filename);
+}
+
+void playSound(Mix_Chunk *snd)
+{
+	Mix_PlayChannel(-1, snd, 0);
+	//Mix_VolumeChunk(snd, 100);
+}
+
+/* simple rect to rect collision check */
+inline bool checkCollision(SDL_Rect rect1, SDL_Rect rect2)
+{
+	if (rect1.x >= rect2.x + rect2.w)
+		return false;
+
+	if (rect1.y >= rect2.y + rect2.h)
+		return false;
+
+	if (rect2.x >= rect1.x + rect1.w)
+		return false;
+
+	if (rect2.y >= rect1.y + rect1.h)
+		return false;
+
+	return true;
+}
+
+uint32 millis()
+{
+	return globalTime;
+}
+
 void screen(int32 width, int32 height, bool32 fscreen, char *title)
 {
 	performanceFrequency = SDL_GetPerformanceFrequency();
@@ -533,8 +603,10 @@ void screen(int32 width, int32 height, bool32 fscreen, char *title)
 
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER);
 
-	int32 tempWidth = screenWidth = width;
-	int32 tempHeight = screenHeight = height;
+	int32 tempWidth = windowWidth = width;
+	int32 tempHeight = windowHeight = height;
+
+	center = { real32(width / 2), real32(height / 2) };
 
 	uint32 flags = SDL_WINDOW_SHOWN;//SDL_WINDOW_RESIZABLE
 #if (_DEBUG)
@@ -562,17 +634,17 @@ void screen(int32 width, int32 height, bool32 fscreen, char *title)
 	{
 		//scale window to desired resolution
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-		SDL_RenderSetLogicalSize(renderer, screenWidth, screenHeight);
+		SDL_RenderSetLogicalSize(renderer, windowWidth, windowHeight);
 	}
 
 	backbufferTexture = SDL_CreateTexture(renderer,
 		SDL_PIXELFORMAT_ARGB8888,
 		SDL_TEXTUREACCESS_STREAMING,
-		screenWidth, screenHeight);
+		windowWidth, windowHeight);
 
-	//pixelBuffer = new unsigned int[screenWidth * screenHeight];	
-	pixelBuffer = (uint32 *)malloc(screenWidth * screenHeight * 4);
-	//pixelBuffer = (uint32 *)VirtualAlloc(0, screenWidth * screenHeight * bytesPerPixel, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+	//pixelBuffer = new unsigned int[windowWidth * windowHeight];	
+	pixelBuffer = (uint32 *)malloc(windowWidth * windowHeight * 4);
+	//pixelBuffer = (uint32 *)VirtualAlloc(0, windowWidth * windowHeight * bytesPerPixel, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 	
 	SDL_Surface *surface = IMG_Load("data/icon.png");
 	SDL_SetWindowIcon(window, surface);
@@ -589,16 +661,19 @@ void screen(int32 width, int32 height, bool32 fscreen, char *title)
 
 	controllerHandle = SDL_GameControllerOpen(0);
 	SDL_GetMouseState(&mouseX, &mouseY);
-
 	for (int32 i = 0; i <= 2; i++)
 	{
 		mouseButton[i] = SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(i);
 	}
 
+	//set up audio, sound frequency, sound format, channels( 2=stereo), sample size
+	Mix_OpenAudio(22050, MIX_DEFAULT_FORMAT, 2, 2048);
+
 	srand(SDL_GetTicks());
 	
 	SDL_SetRenderDrawColor(renderer, 0x65, 0x9C, 0xEF, 255);
 	SDL_RenderClear(renderer);
+	//SDL_ShowCursor(0);
 }
 
 void quit()
@@ -612,6 +687,7 @@ void quit()
 	}
 	
 	TTF_Quit();
+	Mix_Quit();
 	SDL_DestroyTexture(backbufferTexture);
 	//SDL_DestroyTexture(particleTexture);
 	SDL_DestroyRenderer(renderer);
@@ -648,7 +724,7 @@ int main(int argc, char** argv)
 	//SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "", "", NULL);
 	setup();
 
-	const float64 MAX_FRAME_TIME = 1000 / 60;
+	const real64 MAX_FRAME_TIME = 1000 / 60;
 	int32 refreshRate = getWindowRefreshRate();
 	uint32 totalFrames = 0;
 	uint64 lastCounter = SDL_GetPerformanceCounter();
@@ -693,7 +769,7 @@ int main(int argc, char** argv)
 						running = false;
 					if (event.key.keysym.sym == SDLK_s)
 					{
-						//SOIL_save_screenshot("screenshot.bmp", SOIL_SAVE_TYPE_BMP, 0, 0, screenWidth, screenHeight);
+						//SOIL_save_screenshot("screenshot.bmp", SOIL_SAVE_TYPE_BMP, 0, 0, windowWidth, windowHeight);
 						//LOG("Screenshot saved!\n");
 					}
 				} break;
@@ -790,18 +866,18 @@ int main(int argc, char** argv)
 		uint64 counterElapsed = endCounter - lastCounter;
 		uint64 cyclesElapsed = endCycleCount - lastCycleCount;
 
-		float64 msPerFrame = (((1000.0f * (float64)counterElapsed) / (float64)performanceFrequency));
-		float64 fps = (float64)performanceFrequency / (float64)counterElapsed;
-		float64 megaCyclesPerFrame = ((float64)cyclesElapsed / (1000.0f * 1000.0f));
+		real64 msPerFrame = (((1000.0f * (real64)counterElapsed) / (real64)performanceFrequency));
+		real64 fps = (real64)performanceFrequency / (real64)counterElapsed;
+		real64 megaCyclesPerFrame = ((real64)cyclesElapsed / (1000.0f * 1000.0f));
 		
-#if defined(_DEBUG)        
+#if defined(_DEBUG) || defined(FRAMEWORK_INTERNAL)        
 		char message[256];
 		sprintf_s(message, "%.03fms, %.03fFPS, %.03fMEGAc/f, RefreshRate: %d\0", msPerFrame, fps, megaCyclesPerFrame, refreshRate);
 		//NOTE: temporary solution to the switch to fullscreen problem
 		if (fullscreen)
-			print(message, 1, screenHeight+200, 12);
+			print(message, 1, windowHeight+200, 12);
 		else
-			print(message, 1, screenHeight-20, 12);
+			print(message, 1, windowHeight-20, 12);
 
 		//SDL_SetWindowTitle(window, message);
 		totalFrames++;
