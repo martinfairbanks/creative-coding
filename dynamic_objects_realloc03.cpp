@@ -18,7 +18,7 @@
 		vec2 velocity{ 0.0f, 0.0f };
 		int32 radius = 0;
 		Color col;
-		Color fillCol;
+		ColorRGBA fillCol;
 	} *entity;
 
 void createNewEntity(Entity *entity, int i)
@@ -31,9 +31,10 @@ void createNewEntity(Entity *entity, int i)
 	entity[i].col.r = random(0, 255);
 	entity[i].col.g = random(0, 255);
 	entity[i].col.b = random(0, 255);
-	entity[i].fillCol.r = random(0, 255);
-	entity[i].fillCol.g = random(0, 255);
-	entity[i].fillCol.b = random(0, 255);
+	entity[i].fillCol.r = 255;//random(0, 255);
+	entity[i].fillCol.g = 0; random(0, 255);
+	entity[i].fillCol.b = 255;// random(0, 255);
+	entity[i].fillCol.a = 150;
 }
 
 void deleteFirstEntity()
@@ -49,7 +50,8 @@ void setup()
 {
 	screen(960, 540, false, "Drag the mouse to create more circles, use right mouse button to delete");
 	entity = (Entity *)malloc(allocatedEntities * sizeof(Entity));
-	strokeWeight(4);
+	//strokeWeight(4);
+	noStroke();
 	tempTime = globalTime;
 }
 
@@ -85,13 +87,13 @@ void updateAndDraw(uint32 t)
 
 	for (int i = 0; i < numEntities; i++)
 	{
-		entity[i].position += vec2{ (float32)random(-1, 1), (float32)random(-1, 1) };
+		entity[i].position += vec2{ randomf(-1, 1), randomf(-1, 1) };
 
-		if ((entity[i].position.x + entity[i].radius > screenWidth) || (entity[i].position.x - entity[i].radius  < 0))
+		if ((entity[i].position.x + entity[i].radius > windowWidth) || (entity[i].position.x - entity[i].radius  < 0))
 		{
 			entity[i].velocity.x = entity[i].velocity.x * -1;
 		}
-		if ((entity[i].position.y + entity[i].radius > screenHeight) || (entity[i].position.y - entity[i].radius  < 0))
+		if ((entity[i].position.y + entity[i].radius > windowHeight) || (entity[i].position.y - entity[i].radius  < 0))
 		{
 			entity[i].velocity.y = entity[i].velocity.y * -1;
 		}
@@ -110,7 +112,8 @@ void updateAndDraw(uint32 t)
 	uploadPixels();
 	char message[256];
 	sprintf_s(message, "Circle count: %d", numEntities);
-	print(message, 0, screenHeight - 40, 30);
+	stroke(white);
+	print(message, 0, windowHeight - 40, 30);
 }
 
 void shutdown()

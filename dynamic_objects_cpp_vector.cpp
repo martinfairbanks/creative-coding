@@ -13,20 +13,20 @@
 	struct Entity
 	{
 		int32 radius = random(60);
-		vec2 position{ random(radius * 2, screenWidth - radius * 2), random(radius * 2, screenHeight - radius * 2) };
+		vec2 position{ random(radius * 2, windowWidth - radius * 2), random(radius * 2, windowHeight - radius * 2) };
 		vec2 velocity{ random(2, 10), random(2, 7) };
 		Color col{ random(0, 255), random(0, 255), random(0, 255) };
-		Color fillCol{ random(0, 255), random(0, 255), random(0, 255) };
+		ColorRGBA fillCol{ random(0, 255), random(0, 255), random(0, 255), 255 };
 
 		void updateAndDraw()
 		{
 			position += velocity;
-			if ((position.x + radius > screenWidth) || (position.x - radius  < 0))
+			if ((position.x + radius > windowWidth) || (position.x - radius  < 0))
 			{
 				velocity.x = velocity.x * -1;
 			}
 
-			if ((position.y + radius > screenHeight) || (position.y - radius  < 0))
+			if ((position.y + radius > windowHeight) || (position.y - radius  < 0))
 			{
 				velocity.y = velocity.y * -1;
 			}
@@ -75,7 +75,8 @@ void updateAndDraw(uint32 t)
 	uploadPixels();
 	char message[256];
 	sprintf_s(message, "Ball count: %d", numBalls);
-	print(message, 0, screenHeight - 40, 30);
+	stroke(white);
+	print(message, 0, windowHeight - 40, 30);
 }
 
 void shutdown()

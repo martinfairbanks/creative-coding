@@ -21,8 +21,8 @@ struct Balls
 void createNewBall(Balls *balls, int i)
 {
 	balls[i].radius = random(60);
-	balls[i].position.x = random(balls[i].radius * 2, screenWidth - balls[i].radius * 2);
-	balls[i].position.y = random(balls[i].radius * 2, screenHeight - balls[i].radius * 2);
+	balls[i].position.x = random(balls[i].radius * 2, windowWidth - balls[i].radius * 2);
+	balls[i].position.y = random(balls[i].radius * 2, windowHeight - balls[i].radius * 2);
 	balls[i].velocity.x = random(2, 10);
 	balls[i].velocity.y = random(2, 7);
 	balls[i].col.r = random(0, 255);
@@ -70,11 +70,11 @@ void updateAndDraw(uint32 t)
 		balls[i].position += balls[i].velocity;
 
 
-		if ((balls[i].position.x + balls[i].radius > screenWidth) || (balls[i].position.x - balls[i].radius  < 0))
+		if ((balls[i].position.x + balls[i].radius > windowWidth) || (balls[i].position.x - balls[i].radius  < 0))
 		{
 			balls[i].velocity.x = balls[i].velocity.x * -1;
 		}
-		if ((balls[i].position.y + balls[i].radius > screenHeight) || (balls[i].position.y - balls[i].radius  < 0))
+		if ((balls[i].position.y + balls[i].radius > windowHeight) || (balls[i].position.y - balls[i].radius  < 0))
 		{
 			balls[i].velocity.y = balls[i].velocity.y * -1;
 		}
@@ -87,7 +87,8 @@ void updateAndDraw(uint32 t)
 	uploadPixels();
 	char message[256];
 	sprintf_s(message, "Ball count: %d", numBalls);
-	print(message, 0, screenHeight - 40, 30);
+	stroke(white);
+	print(message, 0, windowHeight - 40, 30);
 }
 
 void shutdown()
