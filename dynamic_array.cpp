@@ -1,12 +1,9 @@
 /*	Dynamic array	
 	by Martin Fairbanks
 */
-
 	#define SDL2	
 	#include "framework\creativeframework.cpp"
-	#include <stdio.h>
-	#include <stdlib.h>
-
+	
 	Array entities;
 
 	struct Entity
