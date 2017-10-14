@@ -500,6 +500,8 @@ struct Sprite
 		SDL_RenderCopyEx(renderer, texture, frame, &dstRect, angle, center, flip);
 	}
 
+	
+
 	void clean()
 	{
 		//free texture
@@ -855,7 +857,7 @@ int main(int argc, char** argv)
 			timeDelta = (uint32)MAX_FRAME_TIME;
 		globalTime = SDL_GetTicks();
 
-		updateAndDraw(timeDelta);
+		updateAndDraw(globalTime);
 
 		//save the mouse coordinates for the previous frame, this is used for mousedrag
 		prevMouseX = mouseX;

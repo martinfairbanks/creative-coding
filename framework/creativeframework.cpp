@@ -2,6 +2,9 @@
 			line blending
 			x64 build
 			batch build and make file
+			translate(x, y) -> change pixel functions
+
+
 */
 
 #include <stdint.h>
@@ -468,11 +471,11 @@ void colorMode(int32 mode)
 //converts HSB(=HSV) color to RGB color
 Color colorHSB(Color colorHSB)
 {
-	if (colorHSB.r < 0)
+	if (colorHSB.r < 0 || colorHSB.r > 255)
 		colorHSB.r = 0;
-	if (colorHSB.g < 0)
+	if (colorHSB.g < 0 || colorHSB.g > 255)
 		colorHSB.g = 0;
-	if (colorHSB.b < 0)
+	if (colorHSB.b < 0 || colorHSB.b > 255)
 		colorHSB.b = 0;
 
 	real32 r, g, b, h, s, v;
@@ -1167,13 +1170,14 @@ inline void rect(int32 x, int32 y, int32 width, int32 height)
 	{
 		//draw non filled rect
 		line(x, y, x + width, y);						//top
-		line(x, y + lineWidth, x, y + height);			//left
-		line(x + lineWidth, y + height - lineWidth, x + width, y + height - lineWidth); //bottom
-		line(x + width - lineWidth, y + lineWidth, x + width - lineWidth, y + height - lineWidth);		//right
+		line(x, y, x, y + height);			//left
+		line(x, y + height, x + width, y + height); //bottom
+		line(x + width, y, x + width, y + height);		//right
+		//change the values so we only fill inside the rect
 		x += lineWidth;
 		y += lineWidth;
-		width -= lineWidth * 2;
-		height -= lineWidth * 2;
+		width -= lineWidth;
+		height -= lineWidth;
 	}
 
 	if (fillFlag)
@@ -1463,8 +1467,10 @@ struct Array
 
 	void resize(int32 newSize)
 	{
-		printf("Realloc the Array: %d to %d\n", size, newSize);
 
+#if defined(_DEBUG) || defined(FRAMEWORK_INTERNAL)
+		printf("Realloc the Array: %d to %d\n", size, newSize);
+#endif
 		void **newArray = (void**)realloc(data, sizeof(void *) * newSize);
 		if (newArray)
 		{
