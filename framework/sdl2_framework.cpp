@@ -19,6 +19,7 @@
 	#include <map>		//for keyPressed
 	//#include <SOIL.h>
 
+
 	/* Globals */
 	SDL_Renderer *renderer = 0;
 	SDL_Window *window = 0;
@@ -315,8 +316,8 @@ struct Sprite
 
 	void setOrigin(int32 x, int32 y)
 	{
-		origin.x = x;
-		origin.y = y;
+		origin.x = (int32)x;
+		origin.y = (int32)y;
 	}
 
 	void update(float elapsedTime)
@@ -345,8 +346,8 @@ struct Sprite
 		SDL_Rect dstRect;
 		dstRect.x = x;
 		dstRect.y = y;
-		dstRect.w = sourceRect.w * spriteScale;
-		dstRect.h = sourceRect.h * spriteScale;
+		dstRect.w = int32(sourceRect.w * spriteScale);
+		dstRect.h = int32(sourceRect.h * spriteScale);
 
 		SDL_RenderCopyEx(renderer, texture, &sourceRect, &dstRect, angle, NULL, flip);
 
@@ -356,8 +357,8 @@ struct Sprite
 		SDL_Rect dstRect;
 		dstRect.x = x-origin.x;
 		dstRect.y = y - origin.y;
-		dstRect.w = sourceRect.w * spriteScale;
-		dstRect.h = sourceRect.h * spriteScale;
+		dstRect.w = int32(sourceRect.w * spriteScale);
+		dstRect.h = int32(sourceRect.h * spriteScale);
 
 		SDL_RenderCopyEx(renderer, texture, &sourceRect, &dstRect, angle, NULL, flip);
 
@@ -458,7 +459,7 @@ struct Sprite
 	//draw a frame from spritesheet at pixel position x, y
 	void draw(int32 x, int32 y, int32 frame, real32 angle = 0.0f, SDL_RendererFlip flip = SDL_FLIP_NONE)
 	{
-		SDL_Rect dstRect = { x, y, frameWidth*spriteScale, frameHeight*spriteScale };
+		SDL_Rect dstRect = { x, y, int32(frameWidth*spriteScale), int32(frameHeight*spriteScale) };
 		int32 columns = width / frameWidth;
 
 		SDL_Rect srcRect = { (frame%columns)*frameWidth, (frame / columns)*frameHeight,
@@ -672,7 +673,7 @@ void screen(int32 width, int32 height, bool32 fscreen, char *title)
 	Mix_OpenAudio(22050, MIX_DEFAULT_FORMAT, 2, 2048);
 
 	srand(SDL_GetTicks());
-	
+
 	SDL_SetRenderDrawColor(renderer, 0x65, 0x9C, 0xEF, 255);
 	SDL_RenderClear(renderer);
 	//SDL_ShowCursor(0);

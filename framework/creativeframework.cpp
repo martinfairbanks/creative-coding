@@ -13,6 +13,11 @@
 #include <crtdbg.h> //memory leak check
 #include <math.h>
 #include <float.h>
+#include "dependencies\slang_library_noise.cpp"
+
+//TODO: this is for the gaussian random numbers, fix this with my own gaussian calculations?
+#include <random>
+std::default_random_engine randomGenerator;
 
 typedef int8_t int8;
 typedef int16_t int16;
@@ -270,28 +275,34 @@ struct vec3
 	}
 };
 
-//TODO: check these functions, dosen't work if not cast to doubles?
+//pseudo-random uniform distribution of numbers
+//set the random seed to constant value to return the same pseudo random numbers every time
+void randomSeed(uint32 value)
+{
+	srand(value);
+}
+
+//random number between min and max
 inline int32 random(int32 min, int32 max)
 {
 	/* ex:  Random(-10,20) -> will give -10 to, and including, 20. */
 	max += 1;
 	min -= 1;
-	int32 result = ((double)rand() / (RAND_MAX + 1) * (max - min) + min);
-	return result;
-	//return (rand() / (RAND_MAX + 1) * (max - min) + min);
+	return int32(rand() / (real32)(RAND_MAX + 1) * (max - min) + min);
 }
 
+//random number between 0 and max
 inline int32 random(int32 max)
 {
-	int32 min = -1;
+//	int32 min = -1;
 	max += 1;
-	return ((double)rand() / (RAND_MAX + 1) * (max - min) + min);
+	return int32(rand() / (real32)(RAND_MAX + 1) * (max));
 }
 
 //random float between 0 and 1
 inline real32 randomf()
 {
-	return ((float)rand() / (RAND_MAX));
+	return ((real32)rand() / (RAND_MAX));
 	//random float between -1 and 1
 	//return (((float)rand() / (RAND_MAX)) * 2 - 1.0f);
 }
@@ -308,6 +319,63 @@ inline vec2 random2d()
 	//vec.normalize();
 	vec.setAngle(randomf() * PI * 2);
 	return vec;
+}
+
+//returns a Gaussian(normal) distribution of random numbers around the mean with a specific standard deviation.
+//the probability of getting values far from the mean is low, the probability of getting numbers near the mean is high.
+real32 randomGaussian()
+{
+	//gaussian random numbers with a mean of 0 and standard deviation of 1.0
+	std::normal_distribution<real32> gaussianDistribution(0.0f, 1.0f);
+	return gaussianDistribution(randomGenerator);
+}
+
+real32 randomGaussian(real32 mean)
+{
+	std::normal_distribution<real32> gaussianDistribution(mean, 1.0f);
+	return gaussianDistribution(randomGenerator);
+}
+
+real32 randomGaussian(real32 mean, real32 sd)
+{
+	std::normal_distribution<real32> gaussianDistribution(mean, sd);
+	return gaussianDistribution(randomGenerator);
+}
+
+//1D Perlin noise, returns noise value at specified coordinate, the value is always between 0 and 1.
+real32 noise(real32 x)
+{
+	return _slang_library_noise1(x)*0.5f + 0.5f;
+}
+
+//2D Perlin noise
+real32 noise(real32 x, real32 y)
+{
+	return _slang_library_noise2(x, y)*0.5f + 0.5f;
+}
+
+//3D Perlin noise
+real32 noise(real32 x, real32 y, real32 z)
+{
+	return _slang_library_noise3(x, y, z)*0.5f + 0.5f;
+}
+
+//the likelihood that a random value will be picked is equal to the the first random number (r1)
+//returns a random value between 0 and 1
+real32 montecarlo()
+{
+	//loop until we find a qualifying random number
+	while (true)
+	{
+		real32 r1 = randomf();
+		real32 probability = r1;
+		//real32 probability = pow(1.0 - r1, 8);
+
+		real32 r2 = randomf();
+
+		if (r2 < probability)
+			return r1;
+	}
 }
 
 //convert radians to degrees
@@ -331,6 +399,12 @@ real32 dist(real32 x1, real32 y1, real32 x2, real32 y2)
 	//return sqrt(pow(x1 - x2, 2.0) + pow(y1 - y2, 2.0));
 	return sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 }
+
+//returns a interpolated value between two numbers, the amount parameter is the amount to interpolate between the two values. 
+real32 lerp(real32 start, real32 stop, real32 amount)
+{
+	return amount*(stop - start) + start;
+};
 
 int32 constrain(int32 value, int32 min, int32 max)
 {
@@ -1105,7 +1179,7 @@ inline void line(int32 x1, int32 y1, int32 x2, int32 y2/*, ColorRGBA col*/)
 		SWAP(y1, y2);
 	}
 
-	//Bresenham�s algorithm starts by plotting a pixel at the first coordinate of the line
+	//Bresenham's algorithm starts by plotting a pixel at the first coordinate of the line
 	//(x1, y1), and to x+1, it takes the difference of the y component of the line to the
 	//two possible y coordinates, and uses the y coordinate where the error is the smaller,
 	//and repeats this for every pixel.
@@ -1299,7 +1373,7 @@ inline void circle(int xc, int yc, int radius)
 		int pb = yc + radius + 1, pd = yc + radius + 1; //previous values: to avoid drawing horizontal lines multiple times  (ensure initial value is outside the range)
 		if (lineWidth >= 1)
 		{
-			fillCircleData(xc, yc, p, pb, pd, radius, strokeColor);
+			//fillCircleData(xc, yc, p, pb, pd, radius, strokeColor);
 
 			radius -= lineWidth;
 			
