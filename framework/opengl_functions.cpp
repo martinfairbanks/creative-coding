@@ -1333,7 +1333,7 @@ int loadModel(char *filename)
 		{
 			float tmpx, tmpy, tmpz;
 			sscanf(contents, "v %f %f %f", &tmpx, &tmpy, &tmpz);
-			vertex.push_back(new vec3(tmpx, tmpy, tmpz));
+			vertex.push_back(new vec3{tmpx, tmpy, tmpz});
 		}
 
 		//parse the normals
@@ -1341,7 +1341,7 @@ int loadModel(char *filename)
 		{
 			float tmpx, tmpy, tmpz;
 			sscanf(contents, "vn %f %f %f", &tmpx, &tmpy, &tmpz);
-			normals.push_back(new vec3(tmpx, tmpy, tmpz));
+			normals.push_back(new vec3{ tmpx, tmpy, tmpz });
 		}
 
 		//parse the faces, wich points that makes a face

@@ -519,27 +519,7 @@ int main(int argc, char** argv)
 			stringBatchCount = 0;
 			SDL_RenderPresent(renderer);
 		#endif
-#if 0
-		// Sound output test
-		SDL_LockAudio();
-		int ByteToLock = (soundOutput.runningSampleIndex*soundOutput.bytesPerSample) % soundOutput.secondaryBufferSize;
-		int TargetCursor = ((audioRingBuffer.PlayCursor +
-			(soundOutput.latencySampleCount*soundOutput.bytesPerSample)) %
-			soundOutput.secondaryBufferSize);
-		int BytesToWrite;
-		if (ByteToLock > TargetCursor)
-		{
-			BytesToWrite = (soundOutput.secondaryBufferSize - ByteToLock);
-			BytesToWrite += TargetCursor;
-		}
-		else
-		{
-			BytesToWrite = TargetCursor - ByteToLock;
-		}
 
-		SDL_UnlockAudio();
-		fillSoundBuffer(&soundOutput, ByteToLock, BytesToWrite);
-#endif
 		if (getSecondsElapsed(lastCounter, SDL_GetPerformanceCounter()) < targetSecondsPerFrame)
 		{
 			int32 timeToSleep = (int32)(((targetSecondsPerFrame - getSecondsElapsed(lastCounter, SDL_GetPerformanceCounter())) * 1000) - 1);
