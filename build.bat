@@ -14,6 +14,7 @@ pushd build
 cl %CompilerFlags% ../framework_demo/dynamic_array.cpp %LinkerFlags%
 cl %CompilerFlags% ../framework_demo/test_ogl_sdl_01.cpp %LinkerFlags%
 cl %CompilerFlags% ../framework_demo/test_ogl_sdl_02.cpp %LinkerFlags%
+cl %CompilerFlags% ../framework_demo/dynamic_objects_realloc01.cpp %LinkerFlags%
 cl %CompilerFlags% ../examples/bouncing_balls.cpp %LinkerFlags%
 cl %CompilerFlags% ../examples/rhodonea_curve01.cpp %LinkerFlags%
 cl %CompilerFlags% ../examples/rhodonea_curve02.cpp %LinkerFlags%
