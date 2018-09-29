@@ -1,4 +1,4 @@
-﻿	/*	Noise by Martin Fairbanks
+﻿	/*	Perlin noise by Martin Fairbanks
 		Perlin noise produces a naturally ordered (smooth) sequence of pseudo-random numbers.
 		We can think of one-dimensional Perlin noise as a linear sequence of values over time. 
 		noise() returns a value between 0 and 1.
@@ -9,8 +9,7 @@
 	*/
 
 	#define SDL2
-	//#define OPENGL
-	#include "..\framework\creativeframework.cpp"
+	#include "../framework/creativeframework.cpp"
 
 	struct Mover
 	{
@@ -28,7 +27,7 @@
 
 		void draw()
 		{
-			circle(pos.x, pos.y, 15);
+			circle(pos.x, pos.y, 15.f);
 		};
 
 	} mover;
@@ -72,7 +71,7 @@ void setup()
 	walker.y = center.y;
 }
 
-void updateAndDraw(uint32 t)
+void updateAndDraw()
 {
 	static int32 scene = 0;
 	real32 x, y, n, xoff;
@@ -102,7 +101,7 @@ void updateAndDraw(uint32 t)
 		x = mapVal(n, 0, 1, 0, windowWidth);
 
 		fill(green, 10);
-		circle(x, 250, 20);
+		circle(x, 250.f, 20.f);
 		time += 0.01;
 		SDL_SetWindowTitle(window, "Perlin noise");
 		break;
@@ -153,13 +152,11 @@ void updateAndDraw(uint32 t)
 		break;
 	}
 
-	if (mouseReleased)
+	if (mouseUp() && scene < 4)
 	{
 		clear(c64blue);
 		scene++;
 	}
-
-	uploadPixels();
 }
 
 void shutdown() { }

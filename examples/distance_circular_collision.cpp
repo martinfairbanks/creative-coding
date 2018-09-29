@@ -3,7 +3,7 @@
 	*/
 
 	#define SDL2
-	#include "..\framework\creativeframework.cpp"
+	#include "../framework/creativeframework.cpp"
 	//#include <vector>
 	//using namespace std;
 	const int32 numCircles = 20;
@@ -14,7 +14,7 @@
 		int32 y;
 		int32 radius = 48;
 		int32 speed = 2;
-		Color col = Color(0,0,255);
+		Color col = { 0, 255, 0, 255 };
 
 		void clicked()
 		{
@@ -22,12 +22,12 @@
 			int32 distance = dist(mouseX, mouseY, x, y);
 			//if the distance is less than the radius then the mouse cursor is inside the circle
 			if (distance < 48) {
-				col = Color(0, 255, 0);
+				changeColor();
 			}
 		}
 		void changeColor() 
 		{
-			col = Color(random(255), random(255), random(255));
+			col = Color{ random(255), random(255), random(255), 255 };
 		}
 
 		bool32 intersects(Circle secondCircle)
@@ -54,7 +54,7 @@
 	void setup()
 	{
 		screen(960, 540, false, "click on circles to change color");
-		strokeWeight(3);
+		//strokeWeight(3);
 		noStroke();
 		for (int32 i = 0; i < numCircles; i++)
 		{
@@ -64,10 +64,10 @@
 		}
 	}
 
-void updateAndDraw(uint32 t)
+void updateAndDraw()
 {
 	clear(cornflowerblue);
-	if (mouseIsPressed)
+	if (mouseClick())
 	{
 		for (int32 i = 0; i < numCircles; i++)
 		{
@@ -88,7 +88,6 @@ void updateAndDraw(uint32 t)
 
 		circles[i].updateAndDraw();
 	}
-	uploadPixels();
 }
 
 void shutdown()

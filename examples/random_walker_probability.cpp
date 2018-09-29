@@ -4,7 +4,7 @@
 	*/
 
 	#define SDL2
-	#include "..\framework\creativeframework.cpp"
+	#include "../framework/creativeframework.cpp"
 	
 	struct Walker
 	{
@@ -52,7 +52,7 @@ void setup()
 	//walker = new Walker();
 }
 
-void updateAndDraw(uint32 t)
+void updateAndDraw()
 {
 	//walker->step();
 	//walker->display();
@@ -232,7 +232,7 @@ void updateAndDraw(uint32 t)
 		break;
 	}
 	
-	if (mouseReleased)
+	if (mouseUp() && scene < 5)
 	{
 		clear(c64blue);
 		scene++;

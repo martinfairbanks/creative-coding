@@ -1,10 +1,10 @@
+@echo off
 REM If you want to build with the MSVC compiler you have to execute the vcvarsall.bat batch file:
 REM 64-bit
 REM call "c:\program files (x86)\microsoft visual studio 14.0\vc\vcvarsall.bat" x64
 REM 32-bit
 REM call "c:\program files (x86)\microsoft visual studio 14.0\vc\vcvarsall.bat"
 
-@echo off
 set CompilerFlags=-EHsc -nologo -O2 -Oi -fp:fast
 set LinkerFlags=-link -incremental:no -opt:ref -SUBSYSTEM:WINDOWS
 
@@ -24,6 +24,9 @@ cl %CompilerFlags% ../examples/snow.cpp %LinkerFlags%
 cl %CompilerFlags% ../examples/sprites.cpp %LinkerFlags%
 cl %CompilerFlags% ../examples/stars2d.cpp %LinkerFlags%
 cl %CompilerFlags% ../examples/stars3d.cpp %LinkerFlags%
+cl %CompilerFlags% ../examples/distance_circular_collision.cpp %LinkerFlags%
+cl %CompilerFlags% ../examples/perlin_noise.cpp %LinkerFlags%
+cl %CompilerFlags% ../examples/random_walker_probability.cpp %LinkerFlags%
 
 del *.exp
 del *.lib
