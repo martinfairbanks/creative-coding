@@ -1,639 +1,211 @@
-﻿	/* TODO:	fix fullscreen switch, the screen coordinates gets messed up if you hit return to get to fullscreen
-				
-	*/
-
-	/* Linking */
-	#pragma comment(lib, "SDL2.lib")
-	#pragma comment(lib, "SDL2main.lib")
-	#pragma comment(lib, "SDL2_ttf.lib")
-	#pragma comment(lib, "SDL2_image.lib")
-	#pragma comment(lib, "SDL2_mixer.lib")
-	//#pragma comment(lib, "SOIL.lib")
-
-	/* Includes */
-	#include <SDL2/SDL.h>
-	#include <SDL2/SDL_ttf.h>
-	#include <SDL2/SDL_image.h>
-	#include <SDL2/SDL_mixer.h>
-	#include <sstream>	//sprintf
-	#include <map>		//for keyPressed
-	//#include <SOIL.h>
-
-
-	/* Globals */
-	SDL_Renderer *renderer = 0;
-	SDL_Window *window = 0;
-	const int32 numFonts = 10;			//number of loaded fonts
-	TTF_Font* font[numFonts]{};
-	SDL_Texture *backbufferTexture;		//texture used for drawing using the pixelbuffer
-	uint32 globalTime;
-
-	const Uint8 *keystates = 0;
-	std::map<int, bool> keyArray;
-	SDL_GameController *controllerHandle;
-	uint8 joyUp;
-	uint8 joyDown;
-	uint8 joyLeft;
-	uint8 joyRight;
-	uint8 joyStart;
-	uint8 joyBack;
-	uint8 joyLeftShoulder;
-	uint8 joyRightShoulder;
-	uint8 joyAButton;
-	uint8 joyBButton;
-	uint8 joyXButton;
-	uint8 joyYButton;
-	int32 joyStickX;
-	int32 joyStickY;
-	int32 joyRightStickX;
-	int32 joyRightStickY;
-	const int32 joyDeadZone = 8000;
-
-	uint8 sprite0[16 * 16] =
-	{
-		0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0,
-		0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0,
-		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-		0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0,
-		0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0
-	};
-
-	struct ColorRGBA
-	{
-		int32 r;
-		int32 g;
-		int32 b;
-		int32 a;
-	} colorRGBA{ 0xff, 0xff, 0xff, 0xff };
-
-	ColorRGBA strokeColor{ 255, 255, 255, 255 };
-	ColorRGBA fillColor{ 255, 255, 255, 255 };
-
-bool keyDown(int32 key)
+﻿void screen(int32 width, int32 height, bool32 screen, char *title)
 {
-	//returns true until keyup
-	return (keystates[key] != 0);
-}
+	//retrieves the frequency of the performance counter in counts per seonds
+	state.performanceFrequency = SDL_GetPerformanceFrequency();
 
-bool keyPressed(int32 key)
-{
-	//returns true once, until keyup
-	if (keyArray.find(key) == keyArray.end())
-		keyArray[key] = false;
-
-	if (keystates[key])
-	{
-		if (keyArray[key] == false)
-		{
-			keyArray[key] = true;
-			return true;
-		}
-	}
-	else 
-		keyArray[key] = false;
-
-	return false;
-}
-
-/* SDL drawing functions */
-inline void fill()
-{
-	fillFlag = true;
-}
-
-inline void noFill()
-{
-	fillFlag = false;
-}
-
-inline void clear_(Color col)
-{
-	SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, 255);
-	SDL_RenderClear(renderer);
-}
-
-inline void setColor_(uint8 r, uint8 g, uint8 b, uint8 a = 255)
-{
-	color.r = r;
-	color.g = g;
-	color.b = b;
-	SDL_SetRenderDrawColor(renderer, r, g, b, a);
-}
-
-inline void setColor_(Color col, uint8 a = 255)
-{
-	color = col;
-	SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, a);
-}
-
-inline void pixel_(int32 x, int32 y)
-{
-	SDL_RenderDrawPoint(renderer, x, y);
-}
-
-inline void pixel_(int32 x, int32 y, uint32 col)
-{
-	uint8 r = col >> 16;
-	uint8 g = col  >> 8;
-	uint8 b = col;
-	SDL_SetRenderDrawColor(renderer, r, g, b, 0xff);
-	SDL_RenderDrawPoint(renderer, x, y);
-	//restore color to the one set with setColor
-	SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 0xff);
-}
-
-inline void pixel_(int32 x, int32 y, uint8 r, uint8 g, uint8 b)
-{
-	SDL_SetRenderDrawColor(renderer, r, g, b, 0xff);
-	SDL_RenderDrawPoint(renderer, x, y);
-	//restore color to the one set with setColor
-	SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 0xff);
-}
-
-inline void pixel_(int32 x, int32 y, Color col)
-{
-	SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, 0xff);
-	SDL_RenderDrawPoint(renderer, x, y);
-	//restore color to the one set with setColor
-	SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 0xff);
-}
-
-void line_(int32 x1, int32 y1, int32 x2, int32 y2)
-{
-	SDL_RenderDrawLine(renderer, x1, y1, x2, y2);
-}
-
-inline void rect_(int32 x, int32 y, int32 width, int32 height)
-{
-	SDL_Rect rect = { x, y, width, height };
-	if (fillFlag)
-		SDL_RenderFillRect(renderer, &rect);
-	else
-		SDL_RenderDrawRect(renderer, &rect);
-}
-
-inline void fillCircleData_(int xc, int yc, int p, int pb, int pd, int radius, Color col)
-{
-	int a, b, c, d, e, f, g, h;
-	int x = 0;
-	int y = radius;
-	while (x <= y)
-	{
-		a = xc + x;
-		b = yc + y;
-		c = xc - x;
-		d = yc - y;
-		e = xc + y;
-		f = yc + x;
-		g = xc - y;
-		h = yc - x;
-		if (b != pb) SDL_RenderDrawLine(renderer, a, b, c, b);
-		if (d != pd) SDL_RenderDrawLine(renderer, a, d, c, d); 
-		if (f != b)  SDL_RenderDrawLine(renderer, e, f, g, f); 
-		if (h != d && h != f)  SDL_RenderDrawLine(renderer, e, h, g, h);
-		pb = b;
-		pd = d;
-		if (p < 0) p += (x++ << 2) + 6;
-		else p += ((x++ - y--) << 2) + 10;
-	}
-}
-
-inline void circle_(int xc, int yc, int radius)
-{
-	if (xc + radius < 0 || xc - radius >= windowWidth || yc + radius < 0 || yc - radius >= windowHeight) return;
-
-	if (fillFlag)
-	{
-
-		int p = 3 - (radius << 1);
-		int pb = yc + radius + 1, pd = yc + radius + 1; //previous values: to avoid drawing horizontal lines multiple times  (ensure initial value is outside the range)
-		if (lineWidth >= 1)
-		{
-			fillCircleData_(xc, yc, p, pb, pd, radius, Color{ 0,0,0 });
-
-			radius -= lineWidth;
-
-			int p = 3 - (radius << 1);
-			int pb = yc + radius + 1, pd = yc + radius + 1;
-			fillCircleData_(xc, yc, p, pb, pd, radius, color);
-		}
-		else
-		{
-			fillCircleData_(xc, yc, p, pb, pd, radius, color);
-		}
-	}
-	else
-	{
-		int32 x1 = radius;
-		int32 y1 = 0;
-		int32 err = 0;
-
-		while (x1 >= y1)
-		{
-			SDL_RenderDrawPoint(renderer, xc + x1, yc + y1);
-			SDL_RenderDrawPoint(renderer, xc + y1, yc + x1);
-			SDL_RenderDrawPoint(renderer, xc - y1, yc + x1);
-			SDL_RenderDrawPoint(renderer, xc - x1, yc + y1);
-			SDL_RenderDrawPoint(renderer, xc - x1, yc - y1);
-			SDL_RenderDrawPoint(renderer, xc - y1, yc - x1);
-			SDL_RenderDrawPoint(renderer, xc + y1, yc - x1);
-			SDL_RenderDrawPoint(renderer, xc + x1, yc - y1);
-
-			y1 += 1;
-			err += 1 + 2 * y1;
-			if (2 * (err - x1) + 1 > 0)
-			{
-				x1 -= 1;
-				err += 1 - 2 * x1;
-			}
-		}
-	}
-}
-
-inline void softSprite(uint8 *spriteData, int32 x, int32 y, int32 width, int32 height, Color col = color)
-{
-	if ((x<0) || (x>windowWidth - 16) || (y<0) || (y>windowHeight - 16)) return;
-	int32 c = col.r << 16 | col.g << 8 | col.b | 0xff000000;
-	//uint8 *sprite = spriteMap[id];
-
-	int32 index=0;
-	int32 yOffset = y * windowWidth + x;
-	for (int32 i = 0; i < height; i++)
-	{
-		for (int32 j = 0; j < width; j++)
-		{
-			if (spriteData[index++])
-			{
-				((uint32*)pixelBuffer)[yOffset + j] = c;
-			}
-		}
-		yOffset += windowWidth;
-	}
-}
-
-
-/* -----Textures----- */
-SDL_Texture* loadTexture(char filename[])
-{
-	SDL_Texture* tex = IMG_LoadTexture(renderer, filename);
-
-	if (tex == NULL)
-	{
-		LOG(IMG_GetError());
-		return false;
-	}
-	return tex;
-}
-
-
-struct Sprite
-{
-	int32 width = 0;				//image dimensions
-	int32 height = 0;
-	int32 frameWidth = 0;			//frame dimensions in spritesheet
-	int32 frameHeight = 0;
-	SDL_Texture *texture = 0;		//pointer to the texture image
-	real32 spriteScale = 1.0f;
-
-	int32 frameTime;
-	int32 numFrames = 0;
-	int32 currentFrame = 0;
-	int32 timeToUpdate = 0;
-	bool32 animationDone = false;
-	SDL_Rect sourceRect;
-	vec2 origin{ 0, 0 };
-
-	void setOrigin(int32 x, int32 y)
-	{
-		origin.x = (int32)x;
-		origin.y = (int32)y;
-	}
-
-	void update(float elapsedTime)
-	{
-		timeToUpdate += elapsedTime;
-		if (timeToUpdate > frameTime)
-		{
-			currentFrame++;
-			timeToUpdate = 0;
-			animationDone = false;
-			if (currentFrame < numFrames)
-			{
-				sourceRect.x += frameWidth;
-			}
-			else
-			{
-				sourceRect.x -= frameWidth * (numFrames - 1);
-				currentFrame = 0;
-				animationDone = true;
-			}
-		}
-	}
-
-	void drawAnimation(int x, int y, real32 angle = 0.0f, SDL_RendererFlip flip = SDL_FLIP_NONE)
-	{
-		SDL_Rect dstRect;
-		dstRect.x = x;
-		dstRect.y = y;
-		dstRect.w = int32(sourceRect.w * spriteScale);
-		dstRect.h = int32(sourceRect.h * spriteScale);
-
-		SDL_RenderCopyEx(renderer, texture, &sourceRect, &dstRect, angle, NULL, flip);
-
-	}
-	void drawAnimation(int x, int y, SDL_Rect sourceRect, real32 angle = 0.0f, SDL_RendererFlip flip = SDL_FLIP_NONE)
-	{
-		SDL_Rect dstRect;
-		dstRect.x = x-origin.x;
-		dstRect.y = y - origin.y;
-		dstRect.w = int32(sourceRect.w * spriteScale);
-		dstRect.h = int32(sourceRect.h * spriteScale);
-
-		SDL_RenderCopyEx(renderer, texture, &sourceRect, &dstRect, angle, NULL, flip);
-
-	}
-
-	bool loadTexture(char filename[])
-	{
-		texture = IMG_LoadTexture(renderer, filename);
-
-		if (texture == NULL)
-		{
-			LOG(IMG_GetError());
-			return false;
-		}
-		else
-		{
-			//query texture to get it's width and height
-			SDL_QueryTexture(texture, NULL, NULL, &width, &height);
-		}
-
-		return true;
-	}
-
-	bool loadTextureSpriteSheet(char *filename, int sourceX, int sourceY,
-		int w, int h, int fps, int num_frames)
-	{
-
-		frameTime = fps;
-		numFrames = num_frames;
-
-		//mySprite.loadTextureSpriteSheet("data/cavestory/MyChar.png", 0, 0, 16, 16, x, y, 100)
-		texture = IMG_LoadTexture(renderer, filename);
-
-		frameWidth = w;
-		frameHeight = h;
-		sourceRect.x = sourceX;
-		sourceRect.y = sourceY;
-		sourceRect.w = w;
-		sourceRect.h = h;
-
-		if (texture == NULL)
-		{
-			LOG(IMG_GetError());
-			return false;
-		}
-		else
-		{
-			//query texture to get it's width and height
-			SDL_QueryTexture(texture, NULL, NULL, &width, &height);
-		}
-
-		return true;
-	}
-
-	bool load(char fileName[], int32 w, int32 h)
-	{
-		if (loadTexture(fileName))
-		{
-			frameWidth = w;
-			frameHeight = h;
-			return true;
-		}
-		return false;
-	}
-	void setColor(Uint8 red, Uint8 green, Uint8 blue)
-	{
-		//modulate texture rgb
-		int32 test = SDL_SetTextureColorMod(texture, red, green, blue);
-	}
-
-	void setBlendMode(SDL_BlendMode blending)
-	{
-		//set blending function
-		SDL_SetTextureBlendMode(texture, blending);
-	}
-
-	void setAlpha(Uint8 alpha)
-	{
-		//modulate texture alpha
-		SDL_SetTextureAlphaMod(texture, alpha);
-	}
-
-	//draw texture at position x, y, with width and height
-	void draw(int32 x, int32 y, int32 w, int32 h)
-	{
-		//set draw area
-		SDL_Rect dstRect = { x, y, w, h };
-
-		SDL_RenderCopy(renderer, texture, NULL, &dstRect);
-	}
-
-	//draw texture at position x, y preserving width and height
-	void draw(int32 x, int32 y)
-	{
-		draw(x, y, width, height);
-	}
-
-	//draw a frame from spritesheet at pixel position x, y
-	void draw(int32 x, int32 y, int32 frame, real32 angle = 0.0f, SDL_RendererFlip flip = SDL_FLIP_NONE)
-	{
-		SDL_Rect dstRect = { x, y, int32(frameWidth*spriteScale), int32(frameHeight*spriteScale) };
-		int32 columns = width / frameWidth;
-
-		SDL_Rect srcRect = { (frame%columns)*frameWidth, (frame / columns)*frameHeight,
-			frameWidth, frameHeight };
-
-		SDL_RenderCopyEx(renderer, texture, &srcRect, &dstRect, angle, NULL, flip);
-	}
-
-	/*	draw texture at position x, y, with width and height
-	angle -> an angle in degrees that indicates the rotation that will be applied to the destination
-	flip -> flip value stating which flipping actions should be performed on the texture
-	SDL_FLIP_NONE, SDL_FLIP_HORIZONTAL, SDL_FLIP_VERTICAL
-	*/
-	void draw(int32 x, int32 y, int32 w, int32 h, real64 angle, SDL_RendererFlip flip)
-	{
-		//set draw area
-		SDL_Rect dstRect = { x ,y , w, h };
-
-		SDL_RenderCopyEx(renderer, texture, NULL, &dstRect, angle, NULL, flip);
-	}
-
-	/*	frame ->	source rect in spritesheet or NULL for the entire texture
-	center ->	a point indicating the point around which dstRect will be rotated
-	if NULL, rotation will be done aroud dstrect.w / 2, dstrect.h / 2
-	*/
-	void drawEx(int32 x, int32 y, SDL_Rect* frame = NULL, real64 angle = 0.0f, SDL_Point* center = NULL, SDL_RendererFlip flip = SDL_FLIP_NONE)
-	{
-		//set draw area
-		SDL_Rect dstRect = { x, y, width, height };
-
-		//set frame draw area
-		if (frame != NULL)
-		{
-			dstRect.w = frame->w;
-			dstRect.h = frame->h;
-		}
-
-		//copy image to renderer
-		SDL_RenderCopyEx(renderer, texture, frame, &dstRect, angle, center, flip);
-	}
-
-	
-
-	void clean()
-	{
-		//free texture
-		if (texture != NULL)
-		{
-			SDL_DestroyTexture(texture);
-			texture = NULL;
-		}
-	}
-};
-
-inline void uploadPixels()
-{
-	SDL_UpdateTexture(backbufferTexture, NULL, pixelBuffer, windowWidth * sizeof(uint32));
-	SDL_RenderCopy(renderer, backbufferTexture, NULL, NULL);
-	//SDL_RenderPresent(renderer);
-};
-
-inline void flip()
-{
-	SDL_RenderPresent(renderer);
-};
-
-void print(const char *message, int x, int y, int32 fontSize = 12)
-{
-	int32 size = 0;
-	int32 counter = 0;
-	for (int32 i = 0; i < numFonts; i++)
-	{
-		if (fontSize == counter)
-		{
-			fontSize = i;
-			break;
-		}
-
-		size = i;
-		counter += 6;
-	}
-	SDL_Surface *surf = TTF_RenderText_Solid/*TTF_RenderText_Blended*/(font[size], message, SDL_Color{ (uint8)strokeColor.r, (uint8)strokeColor.g, (uint8)strokeColor.b });
-
-	SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surf);
-	SDL_FreeSurface(surf);
-
-	//get width and height of texture
-	int32 w, h;
-	SDL_QueryTexture(texture, NULL, NULL, &w, &h);
-
-	SDL_Rect dst = { x, y, w, h };
-	SDL_RenderCopy(renderer, texture, NULL, &dst);
-	SDL_DestroyTexture(texture);
-}
-
-/* Sound */
-Mix_Music* loadPlayMusic(Mix_Music *music, char *filename)
-{
-	music = Mix_LoadMUS(filename);
-	//pointer to Mix_Music to play, loop (-1 = infinite)
-	Mix_PlayMusic(music, -1);
-	Mix_VolumeMusic(30);
-	return music;
-}
-
-Mix_Chunk* loadSound(char *filename)
-{
-	return Mix_LoadWAV(filename);
-}
-
-void playSound(Mix_Chunk *snd)
-{
-	Mix_PlayChannel(-1, snd, 0);
-	//Mix_VolumeChunk(snd, 100);
-}
-
-/* simple rect to rect collision check */
-inline bool checkCollision(SDL_Rect rect1, SDL_Rect rect2)
-{
-	if (rect1.x >= rect2.x + rect2.w)
-		return false;
-
-	if (rect1.y >= rect2.y + rect2.h)
-		return false;
-
-	if (rect2.x >= rect1.x + rect1.w)
-		return false;
-
-	if (rect2.y >= rect1.y + rect1.h)
-		return false;
-
-	return true;
-}
-
-uint32 millis()
-{
-	return globalTime;
-}
-
-void screen(int32 width, int32 height, bool32 fscreen, char *title)
-{
-	performanceFrequency = SDL_GetPerformanceFrequency();
-	srand(SDL_GetTicks());
-
-	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER);
+	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO);
 
 	int32 tempWidth = windowWidth = width;
 	int32 tempHeight = windowHeight = height;
 
 	center = { real32(width / 2), real32(height / 2) };
+	
+	#if defined(OPENGL) || defined(OPENGL4)
+		uint32 flags = SDL_WINDOW_OPENGL;// | SDL_WINDOW_RESIZABLE;
+	#else
+		uint32 flags = SDL_WINDOW_SHOWN;//SDL_WINDOW_RESIZABLE
+	#endif
 
-	uint32 flags = SDL_WINDOW_SHOWN;//SDL_WINDOW_RESIZABLE
-#if (_DEBUG)
-	fullscreen = false;
-#else
-	fullscreen = true;
-#endif
-	fullscreen = fscreen;
+	state.fullscreen = screen;
 
 	//set to zero to scale the window to desired resolution without changing the desktop resolution
-	if (fullscreen)
+	if (state.fullscreen)
 	{
-		flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
+		#if defined(OPENGL)
+			flags = SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN;
+		#else
+			flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
+		#endif
 		tempWidth = 0;
 		tempHeight = 0;
 	}
 
+#if 0
+	int32 tempwindowWidth = GetSystemMetrics(SM_CXSCREEN);
+	int32 tempwindowHeight = GetSystemMetrics(SM_CYSCREEN);
+
+	int32 windowPosX = tempwindowWidth / 2 - tempWidth / 2;
+	int32 windowPosY = tempwindowHeight / 2 - tempHeight / 2;
+
+	//prevent window title bar from being shown outside of screen
+	if (windowPosY < 40)
+		windowPosY = 40;
+#endif		
 	window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, tempWidth, tempHeight, flags);
-	if (vSync)
+
+#if defined(OPENGL)
+	glContext = SDL_GL_CreateContext(window);
+	//use doublebuffer
+//	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+
+	if (state.vSync)
+		SDL_GL_SetSwapInterval(1);
+	else
+		SDL_GL_SetSwapInterval(0);
+	
+	//blending
+	glEnable(GL_BLEND);
+	//color = (a*source)+(b*dest)
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	
+
+	set2dProjection();
+#elif defined(OPENGL4)
+	glContext = SDL_GL_CreateContext(window);
+
+	if (state.vSync)
+		SDL_GL_SetSwapInterval(1);
+	else
+		SDL_GL_SetSwapInterval(0);
+	
+	//initialize GLEW
+	glewInit();
+
+	//define the viewport dimensions
+	glViewport(0, 0, windowWidth, windowHeight);
+
+	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+
+	printf("OpenGL version: %s\n", glGetString(GL_VERSION));
+	
+	if (!glewIsSupported("GL_VERSION_4_5"))
+	{
+		printf("OpenGL 4.5 is not available!\n");
+	}
+#if 0
+	/* build and compile shader program */
+	
+	/*colorShader.loadShader("data/shaders/colorshader.vert", "data/shaders/colorshader.frag");
+	colorShader.linkShaders();
+
+	textureShader.loadShader("data/shaders/textureshader.vert", "data/shaders/textureshader.frag");
+	textureShader.linkShaders();*/
+	
+	colorShader.loadShader(vertexShaderSource, fragmentShaderSource);
+	colorShader.linkShaders();
+
+
+	/*real32 vertices[] = {
+		//first triangle
+		1.0f,  1.0f, 0.0f,	//top Right
+		1.0f, -1.0f, 0.0f,	//bottom Right
+		-1.0f,  1.0f, 0.0f, //top Left 
+		//second triangle
+		1.0f, -1.0f, 0.0f,	//bottom Right
+		-1.0f, -1.0f, 0.0f, //bottom Left
+		-1.0f,  1.0f, 0.0f  //top Left
+	};*/
+	
+	/*
+	real32 vertices[] =
+	{
+		-1.0f, 1.0f,
+		-1.0f, -1.0f,
+		1.0f, -1.0f,
+		-1.0f, 1.0f,
+		1.0f, -1.0f,
+		1.0f, 1.0f
+	};
+
+	GLuint vbo, ebo;
+
+	//generate 1 vertex buffer object
+	glGenBuffers(1, &vbo);
+	//bind the buffer to the GL_ARRAY_BUFFER binding point
+	//buffer calls to the GL_ARRAY_BUFFER targets the currently bound buffer (vbo)
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	//allocate memory and copies the vertex data into the buffer that is bound to the GL_ARRAY_BUFFER
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	
+	//enable the position attribute - enable the data that was copied to the buffer
+	//to go to through the graphics processing pipeline 
+	glEnableVertexAttribArray(0);
+
+	//tells opengl how our data buffer is structured - point it to the start of the buffer
+	glVertexAttribPointer(0,	//index of vertex attribute to modify
+		2,						//size of the vertex attribute, number of components. The vertex attribute is a vec2 so it is composed of 2 values.
+		GL_FLOAT,				//data type of each component in the array
+		GL_FALSE,				//normalized = false
+		0,						//stride, space between consecutive vertex attribute sets
+		0);						//offset, where to start read in the buffer
+	*/
+
+	/***** Texture *****/
+
+	// Set up vertex data (and buffer(s)) and attribute pointers
+	GLfloat vertices[] = {
+		//positions          //colors           //texture coords
+		0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,	//top right
+		0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,	//bottom right
+		-0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,	//bottom left
+		-0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f	//top left 
+	};
+
+	GLuint indices[] = {
+		0, 1, 3, //first triangle
+		1, 2, 3  //second triangle
+	};
+
+	GLuint vbo,  ebo;
+	//generate a vertex array object that stores the vbo, ebo and the calls to glEnableVertexAttribArray and glVertexAttribPointer
+	glGenVertexArrays(1, &vao);
+	//generate 1 vertex buffer
+	glGenBuffers(1, &vbo);
+	//generate one element buffer object, that stores indices that OpenGL uses to decide what vertices to draw
+	glGenBuffers(1, &ebo);
+	glBindVertexArray(vao);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+	//position attribute
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
+	glEnableVertexAttribArray(0);
+	//color attribute
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+	glEnableVertexAttribArray(1);
+	//texcoord attribute
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(6 * sizeof(GLfloat)));
+	glEnableVertexAttribArray(2);
+	//unbind vao
+	glBindVertexArray(0);
+
+	// Load and create a texture 
+	GLuint texture;
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture); // All upcoming GL_TEXTURE_2D operations now have effect on this texture object
+										   // Set the texture wrapping parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// Set texture wrapping to GL_REPEAT (usually basic wrapping method)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	// Set texture filtering parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	// Load image, create texture and generate mipmaps
+	/*int textureWidth, textureHeight;
+	unsigned char* image = stb_load_image("data/container.jpg", &textureWidth, &textureHeight, 0, SOIL_LOAD_RGB);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureWidth, textureHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	SOIL_free_image_data(image);
+	glBindTexture(GL_TEXTURE_2D, 0); // Unbind texture when done, so we won't accidentily mess up our texture.*/
+#endif
+#else
+	if (state.vSync)
 		renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	else
 		renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
-	if (fullscreen)
+	if (state.fullscreen)
 	{
 		//scale window to desired resolution
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
@@ -645,55 +217,56 @@ void screen(int32 width, int32 height, bool32 fscreen, char *title)
 		SDL_TEXTUREACCESS_STREAMING,
 		windowWidth, windowHeight);
 
-	//pixelBuffer = new unsigned int[windowWidth * windowHeight];	
-	pixelBuffer = (uint32 *)malloc(windowWidth * windowHeight * 4);
-	//pixelBuffer = (uint32 *)VirtualAlloc(0, windowWidth * windowHeight * bytesPerPixel, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-	
-	SDL_Surface *surface = IMG_Load("data/icon.png");
-	SDL_SetWindowIcon(window, surface);
-	SDL_FreeSurface(surface);
-
 	TTF_Init();
 	int32 fontSize = 6;
 	for (int32 i = 0; i < numFonts; i++)
 	{
-		font[i] = TTF_OpenFont("data/verdana.ttf", fontSize);
+		font[i] = TTF_OpenFont("data/fonts/verdana.ttf", fontSize);
 		//printf("The font max height is: %d\n", TTF_FontHeight(font[i]));
 		fontSize += 6;
 	}
 
-	controllerHandle = SDL_GameControllerOpen(0);
-	SDL_GetMouseState(&mouseX, &mouseY);
-	for (int32 i = 0; i <= 2; i++)
-	{
-		mouseButton[i] = SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(i);
-	}
-
-	//set up audio, sound frequency, sound format, channels( 2=stereo), sample size
-	Mix_OpenAudio(22050, MIX_DEFAULT_FORMAT, 2, 2048);
-
-	srand(SDL_GetTicks());
-
 	SDL_SetRenderDrawColor(renderer, 0x65, 0x9C, 0xEF, 255);
 	SDL_RenderClear(renderer);
-	//SDL_ShowCursor(0);
+#endif
+
+	pixels = (uint32 *)malloc(windowWidth * windowHeight * 4);
+	//pixels = new unsigned int[windowWidth * windowHeight];	
+	//pixels = (uint32 *)VirtualAlloc(0, windowWidth * windowHeight * bytesPerPixel, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+
+	SDL_Surface *surface = loadSTBImage("data/pix/icon.png");
+	SDL_SetWindowIcon(window, surface);
+	SDL_FreeSurface(surface);
+
+	//initialize audio. sound frequency, sound format, channels( 2=stereo), sample size
+	if (Mix_OpenAudio(22050, MIX_DEFAULT_FORMAT, 2, 4096) == -1)
+		printLogError("Failed to initialize SDL_Mixer!");
+
+
+	initInput();
+	randomSeed(SDL_GetTicks());
+	//std::default_random_engine generator(SDL_GetTicks());
 }
 
 void quit()
 {
 	shutdown();
-	free(pixelBuffer);
-	SDL_GameControllerClose(controllerHandle);
-	for (int32 i = 0; i < numFonts; i++)
-	{
-		TTF_CloseFont(font[i]);
-	}
-	
-	TTF_Quit();
+	#if defined(OPENGL) || defined(OPENGL4)
+		SDL_GL_DeleteContext(glContext);
+	#else
+		for (int32 i = 0; i < numFonts; i++)
+		{
+			TTF_CloseFont(font[i]);
+		}
+		TTF_Quit();
+		SDL_DestroyTexture(backbufferTexture);
+		SDL_DestroyRenderer(renderer);
+	#endif
+
+	freeInput();
+	free(pixels);
+	Mix_FreeMusic(music);
 	Mix_Quit();
-	SDL_DestroyTexture(backbufferTexture);
-	//SDL_DestroyTexture(particleTexture);
-	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
 }
@@ -714,54 +287,117 @@ int getWindowRefreshRate()
 	return mode.refresh_rate;
 }
 
+real32 getSecondsElapsed(uint64 OldCounter, uint64 CurrentCounter)
+{
+	return ((real32)(CurrentCounter - OldCounter) / (real32)state.performanceFrequency);
+}
+
 int main(int argc, char** argv)
 {
 	//Check for memory leak if debug build
-#if defined(_DEBUG)        
+#if defined(_DEBUG) || defined(FRAMEWORK_INTERNAL)     
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 	_CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
 	_CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_DEBUG);
 	_CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_DEBUG);
 #endif	
 
+	//TODO: fix assertion macro with message box
 	//SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "", "", NULL);
 	setup();
-
-	const real64 MAX_FRAME_TIME = 1000 / 60;
+	real32 targetSecondsPerFrame;
 	int32 refreshRate = getWindowRefreshRate();
-	uint32 totalFrames = 0;
+	printf("Refresh rate is %d Hz\n", refreshRate);
+
+	if (framesPerSecond)
+		targetSecondsPerFrame = 1.0f / (real32)framesPerSecond;
+	else
+		targetSecondsPerFrame = 1.0f / (real32)refreshRate;
+
+	//this is the time it takes to draw a frame
+	//this allows us to run the game in any framerate we want
+	deltaTime = targetSecondsPerFrame;
+
+	//get the current value of the high resolution counter
 	uint64 lastCounter = SDL_GetPerformanceCounter();
 	uint64 lastCycleCount = __rdtsc();
 	SDL_Event event;
+	state.running = true;
 
-	while (running)
+	 //Enable text input
+	SDL_StartTextInput();
+  
+	while (state.running)
 	{
 		while (SDL_PollEvent(&event))
 		{
 			switch (event.type)
 			{
+				#if defined(OPENGL)
+				//get new dimensions and repaint on window size change  
+				case SDL_WINDOWEVENT:
+				{
+					if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
+					{
+						windowWidth = event.window.data1;
+						windowHeight = event.window.data2;
+						if (projection3DFlag)
+							set3dProjection();
+						else
+							set2dProjection();
+					}
+				} break;
+				#endif
 				case SDL_MOUSEMOTION:
 				{
 					//NOTE: this works in windowed and fullscreen mode
-					mouseX = event.button.x;
-					mouseY = event.button.y;
+					//mouseX = event.button.x;
+					//mouseY = event.button.y;
 				} break;
 				case SDL_KEYDOWN:
 				{
+					//register keypress to the GUI
+					state.keyentered = event.key.keysym.sym;
+					//state.keymod = event.key.keysym.mod;
+					//state.keychar = event.text.text[0];
 					switch (event.key.keysym.sym)
 					{
+						
 						case SDLK_RETURN:
 						{
-							if (fullscreen)
-							{
-								SDL_SetWindowFullscreen(window, SDL_FALSE);
-								fullscreen = false;
-							}
-							else
-							{
-								SDL_SetWindowFullscreen(window, SDL_TRUE);
-								fullscreen = true;
-							}
+							//grab mouse to prevent unexpected movement when the dimensions of the window changes
+							//TODO: check, hides mousecursor?
+							//SDL_SetRelativeMouseMode(SDL_TRUE);
+							#if defined(OPENGL) || defined(OPENGL4)
+								if (state.fullscreen)
+								{
+									SDL_SetWindowFullscreen(window, SDL_FALSE);
+									state.fullscreen = false;
+								}
+								else
+								{
+									//TODO:fix this, is there a windowSetScale?
+									SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+									state.fullscreen = true;
+								}
+							#else
+								if (state.fullscreen)
+								{
+									SDL_RenderSetScale(renderer, 1.0f, 1.0f);
+									SDL_SetWindowFullscreen(window, SDL_FALSE);
+									SDL_ShowCursor(1);
+									state.fullscreen = false;
+								}
+								else
+								{
+									//scale window to desired resolution
+									//SDL_SetWindowFullscreen(window, SDL_TRUE);
+									SDL_RenderSetScale(renderer, 2.0f, 2.0f);
+									SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+									SDL_ShowCursor(0);
+									state.fullscreen = true;
+								}
+							#endif
 						}
 					} break;
 				} break;
@@ -769,129 +405,179 @@ int main(int argc, char** argv)
 				case SDL_KEYUP:
 				{
 					if (event.key.keysym.sym == SDLK_ESCAPE)
-						running = false;
-					if (event.key.keysym.sym == SDLK_s)
+						state.running = false;
+					
+					//save software rendered pixels
+					if (event.key.keysym.sym == SDLK_z)
 					{
-						//SOIL_save_screenshot("screenshot.bmp", SOIL_SAVE_TYPE_BMP, 0, 0, windowWidth, windowHeight);
-						//LOG("Screenshot saved!\n");
+						#if defined(OPENGL)
+							uint32 *buf = (uint32 *)malloc(windowWidth * windowHeight * 4);				
+							uint32 *tempBuf = (uint32 *)malloc(windowWidth * windowHeight * 4);				
+							glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+							//returns the image flipped vertically
+							glReadPixels(0, 0, windowWidth, windowHeight, GL_RGBA, GL_UNSIGNED_BYTE, &buf[0]);
+							//flip image vertically
+							for (int32 y = 0; y < windowHeight; y++)
+							{
+								for (int32 x = 0; x < windowWidth; x++)
+								{
+									tempBuf[y*windowWidth + x] = buf[(windowHeight - y - 1)*windowWidth + x];
+								}
+							}
+							stbi_write_bmp("screenshot.bmp", windowWidth, windowHeight, 4, &tempBuf[0]);
+							free(buf);
+							free(tempBuf);
+						#elif defined(SDL2)
+							SDL_Surface* tempSurface = NULL;
+							SDL_Surface* windowSurface = NULL;
+							windowSurface = SDL_GetWindowSurface(window);
+
+							SDL_RenderReadPixels(renderer, &windowSurface->clip_rect, windowSurface->format->format,
+								pixels, windowSurface->w * windowSurface->format->BytesPerPixel);
+
+							tempSurface = SDL_CreateRGBSurfaceFrom(
+								pixels, windowSurface->w, windowSurface->h, windowSurface->format->BitsPerPixel,
+								windowSurface->w * windowSurface->format->BytesPerPixel, windowSurface->format->Rmask,
+								windowSurface->format->Gmask, windowSurface->format->Bmask, windowSurface->format->Amask);
+
+							SDL_SaveBMP(tempSurface, "screenshot.bmp");
+							SDL_FreeSurface(tempSurface);
+							tempSurface = NULL;
+
+							SDL_FreeSurface(windowSurface);
+							windowSurface = NULL;
+						#endif
 					}
+
+					//TODO: stb saves in RGBA format, two options to fix this
+					//1. change the backbufferTexture to SDL_PIXELFORMAT_RGBA8888 and change all pixel functions to map that format
+					//2. loop through the pixels before save and swap the byte order
+					
+					//Captures the OpenGL window(RGB) and saves it to disk.
+					//SOIL_save_screenshot("test.bmp", SOIL_SAVE_TYPE_BMP, 0, 0, windowWidth, windowHeight);
+					//SOIL_save_image("test.bmp", SOIL_SAVE_TYPE_BMP, windowWidth, windowHeight, 4, (const unsigned char*)pixels);
+					//stbi_write_jpg("test.jpg", windowWidth, windowHeight, 4, (void *)backbufferTexture, 50);
+					//stbi_write_bmp("test.bmp", windowWidth, windowHeight, 4, pixels);
+					//stbi_write_png("test.png", windowWidth, windowHeight, 4, pixels, windowWidth*4);
+					//LOG("Screenshot saved!\n");
+					
+				} break;
+
+				case SDL_TEXTINPUT:
+				{
+					//Not copy or pasting
+					/*if (!((event.text.text[0] == 'c' || event.text.text[0] == 'C') && (event.text.text[0] == 'v' || event.text.text[0] == 'V') && SDL_GetModState() & KMOD_CTRL))
+					{
+						if (event.text.text[0] == '\n')
+							__debugbreak;
+						//Append character
+						inputText += event.text.text;
+						renderText = true;
+					}*/
+
+					//register keypress to the GUI
+					state.keyentered = event.key.keysym.sym;
+					state.keymod = event.key.keysym.mod;
+					state.keychar = event.text.text[0];
+					// if key is ASCII, accept it as character input
+					//if ((event.key.keysym.unicode & 0xFF80) == 0)
+					//	state.keychar = event.key.keysym.unicode & 0x7f; 
+						
+
 				} break;
 
 				case SDL_QUIT:
 				{
-					running = false;
+					state.running = false;
 				} break;
 			}
 		}
-		
-		if (SDL_GameControllerGetAttached(controllerHandle))
-		{
-			joyUp = SDL_GameControllerGetButton(controllerHandle, SDL_CONTROLLER_BUTTON_DPAD_UP);
-			joyDown = SDL_GameControllerGetButton(controllerHandle, SDL_CONTROLLER_BUTTON_DPAD_DOWN);
-			joyLeft = SDL_GameControllerGetButton(controllerHandle, SDL_CONTROLLER_BUTTON_DPAD_LEFT);
-			joyRight = SDL_GameControllerGetButton(controllerHandle, SDL_CONTROLLER_BUTTON_DPAD_RIGHT);
-			joyStart = SDL_GameControllerGetButton(controllerHandle, SDL_CONTROLLER_BUTTON_START);
-			joyBack = SDL_GameControllerGetButton(controllerHandle, SDL_CONTROLLER_BUTTON_BACK);
-			joyLeftShoulder = SDL_GameControllerGetButton(controllerHandle, SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
-			joyRightShoulder = SDL_GameControllerGetButton(controllerHandle, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
-			joyAButton = SDL_GameControllerGetButton(controllerHandle, SDL_CONTROLLER_BUTTON_A);
-			joyBButton = SDL_GameControllerGetButton(controllerHandle, SDL_CONTROLLER_BUTTON_B);
-			joyXButton = SDL_GameControllerGetButton(controllerHandle, SDL_CONTROLLER_BUTTON_X);
-			joyYButton = SDL_GameControllerGetButton(controllerHandle, SDL_CONTROLLER_BUTTON_Y);
+#ifdef SDL2
+		stringBatchCount = 0;
+		SDL_RenderClear(renderer);
+#endif
+		updateInput();
+		#ifdef OPENGL
+			glLoadIdentity();
+		#endif
+		updateAndDraw();
 
-			joyStickX = SDL_GameControllerGetAxis(controllerHandle, SDL_CONTROLLER_AXIS_LEFTX);
-			joyStickY = SDL_GameControllerGetAxis(controllerHandle, SDL_CONTROLLER_AXIS_LEFTY);
-			joyRightStickX = SDL_GameControllerGetAxis(controllerHandle, SDL_CONTROLLER_AXIS_RIGHTX);
-			joyRightStickY = SDL_GameControllerGetAxis(controllerHandle, SDL_CONTROLLER_AXIS_RIGHTY);
+		//update screen
+		#if defined(OPENGL) || defined(OPENGL4)
+			/*if (doubleBufferDisabledFlag)
+				glFlush();
+			else*/
+				//update screen
+				SDL_GL_SwapWindow(window);
+		#else
+			if (state.softwareRenderer)
+				uploadPixels();
+			for (int32 i = 0; i < stringBatchCount; i++)
+				print(stringBatch[i]);
+
+			stringBatchCount = 0;
+			SDL_RenderPresent(renderer);
+		#endif
+#if 0
+		// Sound output test
+		SDL_LockAudio();
+		int ByteToLock = (soundOutput.runningSampleIndex*soundOutput.bytesPerSample) % soundOutput.secondaryBufferSize;
+		int TargetCursor = ((audioRingBuffer.PlayCursor +
+			(soundOutput.latencySampleCount*soundOutput.bytesPerSample)) %
+			soundOutput.secondaryBufferSize);
+		int BytesToWrite;
+		if (ByteToLock > TargetCursor)
+		{
+			BytesToWrite = (soundOutput.secondaryBufferSize - ByteToLock);
+			BytesToWrite += TargetCursor;
+		}
+		else
+		{
+			BytesToWrite = TargetCursor - ByteToLock;
 		}
 
-		keystates = SDL_GetKeyboardState(NULL);
-		//SDL_GetGlobalMouseState(&mouseX, &mouseY); //this dosen't work in fullscren with SDL_RenderSetLogicalSize
-		/*
-		for (int32 i = 0; i <= 3; i++)
+		SDL_UnlockAudio();
+		fillSoundBuffer(&soundOutput, ByteToLock, BytesToWrite);
+#endif
+		if (getSecondsElapsed(lastCounter, SDL_GetPerformanceCounter()) < targetSecondsPerFrame)
 		{
-			mouseButton[i] = SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(i);
-		}*/
-		mouseReleased = false;
-		for (int i = 1; i <= 3; i++)
-		{
-			mouseButton[i] = SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(i);
-		
-				if (mouseIsPressed && mouseButton[i])
-				{
-					mouseReleased = false;
-				}
-				else if (mouseIsPressed && !mouseButton[1] && !mouseButton[2] && !mouseButton[3])
-				{
-					mouseReleased = true;
-				}
-		
-		
-		}
-
-		mouseIsPressed = false;
-		for (int i = 1; i <= 3; i++)
-		{
-			mouseButton[i] = SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(i);
-			if (mouseButton[i])
+			int32 timeToSleep = (int32)(((targetSecondsPerFrame - getSecondsElapsed(lastCounter, SDL_GetPerformanceCounter())) * 1000) - 1);
+			if (timeToSleep > 0)
 			{
-				//mouseClick = true;
-				mouseIsPressed = true;
+				SDL_Delay(timeToSleep);
+			}
+			//Assert(getSecondsElapsed(lastCounter, SDL_GetPerformanceCounter()) < targetSecondsPerFrame)
+			while (getSecondsElapsed(lastCounter, SDL_GetPerformanceCounter()) < targetSecondsPerFrame)
+			{
+				//wait
 			}
 		}
-		if (mouseIsPressed && (mouseX != prevMouseX || mouseX != prevMouseX))
-			mouseDragged = true;
-		else
-			mouseDragged = false;
 
-		/*mouseIsPressed = false;
-		for (int32 i = 1; i <= 3; i++)
-		{
-			mouseButton[i] = SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(i);
-			if (mouseButton[i])
-				mouseIsPressed = true;
-		}*/
-
-		/* the time it takes to draw one frame */
-		uint32 timeDelta = SDL_GetTicks() - globalTime;
-		if (timeDelta > MAX_FRAME_TIME)
-			timeDelta = (uint32)MAX_FRAME_TIME;
-		globalTime = SDL_GetTicks();
-
-		updateAndDraw(globalTime);
-
-		//save the mouse coordinates for the previous frame, this is used for mousedrag
-		prevMouseX = mouseX;
-		prevMouseY = mouseX;
-
-		uint64 endCycleCount = __rdtsc();
+		//get the current value of the high resolution counter
 		uint64 endCounter = SDL_GetPerformanceCounter();
+
+#if defined(SDL2) && ((_DEBUG) || defined(FRAMEWORK_INTERNAL)) 
+		print(debugMessage, 10, 10, 12);
+		SDL_SetWindowTitle(window, debugMessage);
+#endif
+		uint64 endCycleCount = __rdtsc();
 		uint64 counterElapsed = endCounter - lastCounter;
 		uint64 cyclesElapsed = endCycleCount - lastCycleCount;
-
-		real64 msPerFrame = (((1000.0f * (real64)counterElapsed) / (real64)performanceFrequency));
-		real64 fps = (real64)performanceFrequency / (real64)counterElapsed;
+		real64 msPerFrame = (((1000.0f * (real64)counterElapsed) / (real64)state.performanceFrequency));
+		real64 fps = (real64)state.performanceFrequency / (real64)counterElapsed;
 		real64 megaCyclesPerFrame = ((real64)cyclesElapsed / (1000.0f * 1000.0f));
-		
-#if defined(_DEBUG) || defined(FRAMEWORK_INTERNAL)        
-		char message[256];
-		sprintf_s(message, "%.03fms, %.03fFPS, %.03fMEGAc/f, RefreshRate: %d\0", msPerFrame, fps, megaCyclesPerFrame, refreshRate);
-		//NOTE: temporary solution to the switch to fullscreen problem
-		if (fullscreen)
-			print(message, 1, windowHeight+200, 12);
-		else
-			print(message, 1, windowHeight-20, 12);
 
-		//SDL_SetWindowTitle(window, message);
-		totalFrames++;
+#if defined(_DEBUG) || defined(FRAMEWORK_INTERNAL)       
+		sprintf_s(debugMessage, "%.03fms, %.03fFPS, %.03fMEGAc/f, RefreshRate: %d, FrameCount: %llu, perFreq: %llu, endCounter: %llu, elapsed: %llu\0", msPerFrame, fps, megaCyclesPerFrame, refreshRate, frameCount, state.performanceFrequency, endCounter, counterElapsed);
 #endif
-		//update screen
-		//uploadPixels();
-		SDL_RenderPresent(renderer);
-
+	
 		lastCycleCount = endCycleCount;
 		lastCounter = endCounter;
+		//one frame drawn
+		frameCount++;
 	}
+
 	quit();
 	return 0;
 }
