@@ -1,22 +1,24 @@
-/*	Dynamic objects
+/*	Dynamic objects	
 	by Martin Fairbanks
 
-	C style - using malloc/realloc to manage memory
+	C style - using malloc/realloc to manage memory 
+	double or half the allocated memory depending on how many objects created
 */
 
-#define SDL2	
-#include "../framework/creativeframework.cpp"
+	#define SDL2	
+	#include "../framework/creativeframework.cpp"
 
-int32 numBalls = 50;
+	int32 numBalls = 150;
+	int32 allocatedBalls = 150;
 
-struct Balls
-{
-	vec2 position{ 0.0f, 0.0f };
-	vec2 velocity{ 0.0f, 0.0f };
-	real32 radius = 0;
-	Color strokeCol;
-	Color fillCol;
-} *balls;
+	struct Balls
+	{
+		vec2 position{ 0.0f, 0.0f };
+		vec2 velocity{ 0.0f, 0.0f };
+		real32 radius = 0;
+		Color strokeCol;
+		Color fillCol;
+	} *balls;
 
 void createNewBall(Balls *balls, int i)
 {
@@ -32,15 +34,15 @@ void createNewBall(Balls *balls, int i)
 	balls[i].fillCol.r = random(0, 255);
 	balls[i].fillCol.g = random(0, 255);
 	balls[i].fillCol.b = random(0, 255);
-	balls[i].fillCol.a = random(0, 255);
+	balls[i].fillCol.a = 255;
 }
 
 void setup()
 {
 	screen(960, 540, false, "Left click or A key: add ball. Right click or D key: delete ball.");
-	
-	balls = (Balls *)malloc(numBalls * sizeof(Balls));
-	for (int i = 0; i < numBalls; i++)
+	balls = (Balls *)malloc(allocatedBalls * sizeof(Balls));
+
+	for (int i = 0; i < allocatedBalls; i++)
 	{
 		createNewBall(balls, i);
 	}
@@ -49,11 +51,20 @@ void setup()
 void updateAndDraw()
 {
 	clear(purple);
-	
+	int32 sizee = sizeof(balls) / sizeof(balls[0]);
+
 	if (mouseUp(MOUSE_LEFT) || joyAButton || keyHit(SDL_SCANCODE_A))
 	{
 		numBalls++;
-		balls = (Balls *)realloc(balls, numBalls * sizeof(Balls));
+
+		//if we need more memory
+		if (numBalls >= allocatedBalls)
+		{
+			//double the allocated memory
+			allocatedBalls *= 2;
+			balls = (Balls *)realloc(balls, allocatedBalls * sizeof(Balls));
+			createNewBall(balls, numBalls - 1);
+		}
 		createNewBall(balls, numBalls - 1);
 	}
 
@@ -62,7 +73,14 @@ void updateAndDraw()
 		if (numBalls != 1)
 		{
 			numBalls--;
-			balls = (Balls *)realloc(balls, numBalls * sizeof(Balls));
+			//if we have to much memory
+			if (numBalls >=5 && numBalls < allocatedBalls/2)
+			{
+				//half the allocated memory
+				allocatedBalls /= 2;
+				balls = (Balls *)realloc(balls, allocatedBalls * sizeof(Balls));
+				createNewBall(balls, numBalls - 1);
+			}
 		}
 	}
 
